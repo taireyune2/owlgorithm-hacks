@@ -40,6 +40,10 @@
 - Google ADK installed (`pip install google-adk`)
 - PyAudio for audio processing
 
+### Google ADK API Keys
+- https://aistudio.google.com/app/apikey
+- Create API key
+
 ### Installation
 
 1. Clone this repository
