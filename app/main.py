@@ -20,7 +20,7 @@ import warnings
 
 from pathlib import Path
 from dotenv import load_dotenv
-
+from google.genai import types
 from google.genai.types import (
     Part,
     Content,
@@ -31,10 +31,11 @@ from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
+from app.ConnectionManager import ConnectionManager
 from app.main_agent.agent import root_agent
 
 #
@@ -64,7 +65,10 @@ async def start_agent_session(user_id, is_audio=False):
 
     # Set response modality
     modality = "AUDIO" if is_audio else "TEXT"
-    run_config = RunConfig(response_modalities=[modality])
+    run_config = RunConfig(
+        response_modalities=[modality],
+        output_audio_transcription=types.AudioTranscriptionConfig(),
+        input_audio_transcription=types.AudioTranscriptionConfig())
 
     # Create a LiveRequestQueue for this session
     live_request_queue = LiveRequestQueue()
@@ -80,6 +84,11 @@ async def start_agent_session(user_id, is_audio=False):
 
 async def agent_to_client_messaging(websocket, live_events):
     """Agent to client communication"""
+
+    # Track user and model outputs between turn completion events
+    input_texts = []
+    output_texts = []
+
     while True:
         async for event in live_events:
 
@@ -122,7 +131,6 @@ async def agent_to_client_messaging(websocket, live_events):
                 await websocket.send_text(json.dumps(message))
                 print(f"[AGENT TO CLIENT]: text/plain: {message}")
 
-
 async def client_to_agent_messaging(websocket, live_request_queue):
     """Client to agent communication"""
     while True:
@@ -155,6 +163,8 @@ app = FastAPI()
 STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+# Socket Connection Manager. It has functions such as connect, disconnect, etc
+manager = ConnectionManager()
 
 @app.get("/")
 async def root():
@@ -165,29 +175,33 @@ async def root():
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
     """Client websocket endpoint"""
-
+    
     # Wait for client connection
-    await websocket.accept()
+    await manager.connect(websocket)
     print(f"Client #{user_id} connected, audio mode: {is_audio}")
 
-    # Start agent session
-    user_id_str = str(user_id)
-    live_events, live_request_queue = await start_agent_session(user_id_str, is_audio == "true")
+    try:
+        # Start agent session
+        user_id_str = str(user_id)
+        live_events, live_request_queue = await start_agent_session(user_id_str, is_audio == "true")
 
-    # Start tasks
-    agent_to_client_task = asyncio.create_task(
-        agent_to_client_messaging(websocket, live_events)
-    )
-    client_to_agent_task = asyncio.create_task(
-        client_to_agent_messaging(websocket, live_request_queue)
-    )
+        # Start tasks
+        agent_to_client_task = asyncio.create_task(
+            agent_to_client_messaging(websocket, live_events)
+        )
+        client_to_agent_task = asyncio.create_task(
+            client_to_agent_messaging(websocket, live_request_queue)
+        )
 
-    # Wait until the websocket is disconnected or an error occurs
-    tasks = [agent_to_client_task, client_to_agent_task]
-    await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+        # Wait until the websocket is disconnected or an error occurs
+        tasks = [agent_to_client_task, client_to_agent_task]
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 
-    # Close LiveRequestQueue
-    live_request_queue.close()
+        # Close LiveRequestQueue
+        live_request_queue.close()
 
-    # Disconnected
-    print(f"Client #{user_id} disconnected")
+        # Disconnected
+        print(f"Client #{user_id} disconnected")
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
