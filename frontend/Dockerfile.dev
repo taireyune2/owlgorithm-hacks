@@ -1,0 +1,24 @@
+FROM node:lts-bullseye
+
+### set working directory
+WORKDIR /app
+
+### copy source code
+COPY public ./public
+# COPY node_modules ./node_modules
+COPY src ./src
+
+### add `/app/node_modules/.bin` to $PATH
+ENV PATH /app/node_modules/.bin:$PATH
+
+### install app dependencies
+COPY package.json ./
+COPY package-lock.json ./
+COPY tsconfig.json ./
+COPY .env.development ./
+
+RUN npm install
+# RUN npm install --silent
+
+CMD ["npm", "start"]
+# CMD ["/bin/bash"]
