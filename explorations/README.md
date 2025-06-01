@@ -54,7 +54,7 @@
 2. Create virtual environment
    ```
    python3 -m venv .venv
-   source .venv/bin/activate
+   source ../../.venv/bin/activate
    which python
    deactivate 
    ```
@@ -66,6 +66,10 @@
 
 4. Open the client in your browser
    ```
+  source ../../.venv/bin/activate
+   Cd into explorations directory
+   CD into app
+   Run uvicorn main:app --reload
    Run And Debug Python: FastAPI in visual studio 
    Open localhost:8000
    ```
