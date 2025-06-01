@@ -4,8 +4,7 @@
         "env": "dev",
         "file": {
             "path": "../logs"
-        },
-        "console": {}
+        }
     },
     "agent": {
         "name": "OwlSpeak"
