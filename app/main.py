@@ -34,6 +34,7 @@ from google.adk.agents.run_config import RunConfig
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.ConnectionManager import ConnectionManager
 from app.main_agent.agent import root_agent
@@ -165,6 +166,14 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Socket Connection Manager. It has functions such as connect, disconnect, etc
 manager = ConnectionManager()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():
