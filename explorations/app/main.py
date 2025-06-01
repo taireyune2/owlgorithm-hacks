@@ -35,7 +35,7 @@ from fastapi import FastAPI, WebSocket
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from app.main_agent.agent import root_agent
+from main_agent.agent import root_agent
 
 #
 # ADK Streaming
