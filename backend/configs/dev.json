@@ -1,0 +1,10 @@
+{
+    "logging": {
+        "level": 20,
+        "env": "dev",
+        "path": "../logs"
+    },
+    "app": {
+        "name": "OwlSpeak"
+    }
+}

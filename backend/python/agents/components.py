@@ -5,8 +5,13 @@ from google.genai import types # For creating message Content/Parts
 from dotenv import load_dotenv
 
 from .root_agent.agent import root_agent
+from .router_agent.agent import router_agent
 
-async def main():
+
+
+
+
+async def demo():
     load_dotenv()
 
     APP_NAME = "text_demo"
@@ -51,4 +56,4 @@ async def main():
         print(f"{key}: {value}")
 
 
-asyncio.run(main())
+asyncio.run(demo())
