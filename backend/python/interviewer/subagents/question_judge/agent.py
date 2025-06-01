@@ -46,4 +46,6 @@ question_judge = LlmAgent(
     # tools=[],
     output_key="question_judgement", 
     output_schema=QuestionJudgement,
+    disallow_transfer_to_parent=True,
+    disallow_transfer_to_peers=True,
 )

@@ -2,9 +2,8 @@
 import os, sys
 import logging
 import logging.handlers
-from io import StringIO
 from queue import Queue
-import atexist
+import atexit
 
 def setup(configs: dict) -> logging.Logger:
     """
@@ -17,7 +16,10 @@ def setup(configs: dict) -> logging.Logger:
     configs = {
         "level": 20,
         "env": "dev",
-        "path": "logs"
+        "file": {
+            "path": "../logs"
+        },
+        "console": {}
     }
     """
     # Create root logger
@@ -26,18 +28,17 @@ def setup(configs: dict) -> logging.Logger:
     log_format = logging.Formatter(
         "%(levelname)s:%(asctime)s [%(process)d] %(filename)s:%(lineno)d %(message)s"
     )
-
     handlers = []
 
-    # std out handlers
-    std_handler = logging.StreamHandler()
-    std_handler.setFormatter(log_format)
-    handlers.append(std_handler)
+    if "console" in configs:
+        # std out handlers
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(log_format)
+        handlers.append(console_handler)
 
-    if configs.get("path", ""):
-        log_stream = StringIO()
+    if "file" in configs:
         file_handler = logging.handlers.TimedRotatingFileHandler(
-            os.path.join(configs['path'], configs['env'] + ".log"),
+            os.path.join(configs['file']['path'], configs['env'] + ".log"),
             when="midnight",
             backupCount=7,
         )
