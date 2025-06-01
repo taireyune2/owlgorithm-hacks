@@ -4,8 +4,8 @@ from google.adk.runners import Runner
 from google.genai import types # For creating message Content/Parts
 from dotenv import load_dotenv
 
-from .root_agent.agent import root_agent
-from .router_agent.agent import router_agent
+from .interviewer.agent import root_agent
+from .interviewer.agent import router_agent
 
 
 
