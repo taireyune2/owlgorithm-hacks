@@ -40,7 +40,7 @@ Respond ONLY in valid JSON format following this schema:
 Do NOT include any explanations, context, or text outside of this JSON object.
 """
 
-ontopic_detector = LlmAgent(
+agent = LlmAgent(
     name="ontopic_detector", 
     description="Detect whether the user response is on-topic.",
     model="gemini-2.0-flash",

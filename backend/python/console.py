@@ -1,10 +1,12 @@
 import logging
 import json
+import asyncio
 
-from .state import InterviewSingleton
+from interviewer.state import InterviewSingleton
+from common import logger, configs
 
 
-async def main_async(configs: dict):
+async def console_async(configs: dict):
     interview = InterviewSingleton(configs)
     print("Provide unique identifier")
     user_id = input("User ID: ")
@@ -21,7 +23,7 @@ async def main_async(configs: dict):
             response = open(response_file, "r").read().strip()
             content = await interview.proceed(user_id, session_id, response)
             if content:
-                print(f"Response from agent:\n{content.parts[0].text}")
+                print(f"Output from agent:\n{content.parts[0].text}")
             else:
                 print("No response from agent.")
 
@@ -32,8 +34,10 @@ async def main_async(configs: dict):
             )
 
             # await interview.reset_session(user_id, session_id)
-            
-
     except KeyboardInterrupt:
         print("\nEnding exchange.")
 
+
+if __name__ == "__main__":
+    logger.setup(configs.file["logging"])
+    asyncio.run(console_async(configs.file["agent"]))

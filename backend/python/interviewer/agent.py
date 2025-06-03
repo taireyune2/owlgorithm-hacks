@@ -9,16 +9,12 @@ from typing import AsyncGenerator, Optional
 from typing_extensions import override
 import logging  
 
-from .subagents.ontopic_detector.agent import ontopic_detector
-from .subagents.followup_questioner.agent import followup_questioner
-from .subagents.question_judge.agent import question_judge
-
-
+from .subagents import ontopic_detector, followup_questioner, question_judge
 
 
 sequential_question_formulator = SequentialAgent(
     name="sequential_question_formulator",
-    sub_agents=[followup_questioner, question_judge],
+    sub_agents=[followup_questioner.agent, question_judge.agent],
     description="Sequential agent that handles follow-up questions and judges responses.",
 )
 
@@ -37,7 +33,7 @@ def populate_state(callback_context: CallbackContext) -> Optional[types.Content]
 
 root_agent = ParallelAgent(
     name="root_agent",
-    sub_agents=[ontopic_detector, sequential_question_formulator],
+    sub_agents=[ontopic_detector.agent, sequential_question_formulator],
     description="Parallel agent that detects topics and manages follow-up questions.",
     before_agent_callback=populate_state
 )
