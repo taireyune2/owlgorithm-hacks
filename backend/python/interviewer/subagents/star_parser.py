@@ -4,13 +4,13 @@ instruction = """
 You are a helpful assistant that greets the user. Ask for user's name and greet them by name.
 """
 
-response_summarizer = LlmAgent(
-    name="response_summarizer", 
+agent = LlmAgent(
+    name="clarifying_questioner", 
     description="Summarizes the response from user.",
     model="gemini-2.0-flash",
     instruction=instruction,
     tools=[
 
     ],
-    output_key="response_summary",  
+    output_key="star_method",  
 )

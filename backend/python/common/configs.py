@@ -20,8 +20,4 @@ def _get_args():
 _args = _get_args()
 
 with open(_args.config_dir, "r") as f:
-    _configs = json.load(f)
-
-logging = _configs["logging"]
-agent = _configs["agent"]
-
+    file: dict = json.load(f)

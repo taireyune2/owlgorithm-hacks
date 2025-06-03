@@ -18,7 +18,7 @@ Here is a response from a user:
 Please ask an appropriate follow-up question based on the response.
 """
 
-followup_questioner = LlmAgent(
+agent = LlmAgent(
     name="followup_questioner", 
     description="Questioner that asks a follow-up question based on the user's response.",
     model="gemini-2.0-flash",

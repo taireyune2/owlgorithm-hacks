@@ -38,7 +38,7 @@ Respond ONLY in valid JSON format following this schema:
 Do NOT include any explanations, context, or text outside of this JSON object.
 """
 
-question_judge = LlmAgent(
+agent = LlmAgent(
     name="question_judge", 
     description="Summarizes the response from user.",
     model="gemini-2.0-flash",
