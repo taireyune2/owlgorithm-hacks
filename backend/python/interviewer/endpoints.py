@@ -4,9 +4,19 @@ from fastapi import APIRouter, WebSocket, Depends
 # from common import auth
 
 router = APIRouter(
-    prefix="/interview",
+    prefix="/",
 )
 
+
+
+@router.post("/upload")
+async def upload_material(placeholder: str):
+# async def upload_material(placeholder: str, token: str = Depends(auth.validate_token)):
+    """
+    Allow user to upload relavent material about the interview such
+    as resume, job description, and target company.
+    """
+    pass
 
 
 @router.post("/")
@@ -16,16 +26,6 @@ async def interview_session(response: str):
     Text mock interview session.
 
     For agent debug.
-    """
-    pass
-
-
-@router.post("/upload")
-async def upload_material(placeholder: str):
-# async def upload_material(placeholder: str, token: str = Depends(auth.validate_token)):
-    """
-    Allow user to upload relavent material about the interview such
-    as resume, job description, and target company.
     """
     pass
 

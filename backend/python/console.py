@@ -22,16 +22,16 @@ async def console_async(configs: dict):
             
             response = open(response_file, "r").read().strip()
             content = await interview.proceed(user_id, session_id, response)
-            if content:
+            if content and content.parts:
                 print(f"Output from agent:\n{content.parts[0].text}")
             else:
                 print("No response from agent.")
 
-            state = await interview.get_state(user_id, session_id)
-            logging.info(
-                "Post process session state: %s", 
-                json.dumps(state, indent=2)
-            )
+            # state = await interview.get_state(user_id, session_id)
+            # logging.info(
+            #     "Post process session state: %s", 
+            #     json.dumps(state, indent=2)
+            # )
 
             # await interview.reset_session(user_id, session_id)
     except KeyboardInterrupt:

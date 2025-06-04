@@ -10,7 +10,7 @@ from typing_extensions import override
 import logging  
 
 from .subagents import ontopic_detector, followup_questioner, question_judge
-
+from .utils import log_agent_context, log_before_model_context, log_after_model_context
 
 sequential_question_formulator = SequentialAgent(
     name="sequential_question_formulator",
@@ -25,7 +25,8 @@ def populate_state(callback_context: CallbackContext) -> Optional[types.Content]
     """
     if not callback_context.user_content or not callback_context.user_content.parts:
         return types.Content(role="system", parts=[types.Part(text="User input is required.")])
-    
+
+    # print(f"Running before agent callback.\n{callback_context.user_content.parts[0].text}")
     callback_context.state["user_response"] = callback_context.user_content.parts[0].text
     return None
     # logging.info("Running before agent callback...")
@@ -35,7 +36,8 @@ root_agent = ParallelAgent(
     name="root_agent",
     sub_agents=[ontopic_detector.agent, sequential_question_formulator],
     description="Parallel agent that detects topics and manages follow-up questions.",
-    before_agent_callback=populate_state
+    before_agent_callback=[log_agent_context, populate_state],
+    after_agent_callback=[log_agent_context],
 )
 
 # instructions = """

@@ -66,11 +66,11 @@ class InterviewSingleton:
         return session
     
     async def proceed(self, user_id: str, session_id: str, message: str) -> types.Content:
-        session = await self.get_session(user_id, session_id)
-        logging.info(
-            "pre session state: %s", 
-            json.dumps(session.state, indent=2)
-        )        
+        # session = await self.get_session(user_id, session_id)
+        # logging.info(
+        #     "pre session state: %s", 
+        #     json.dumps(session.state, indent=2)
+        # )        
         try:
             async for event in self.runner.run_async(
                 user_id=user_id,
@@ -87,13 +87,12 @@ class InterviewSingleton:
                 ### retrieve user response from state
                 is_appropriate = session.state.get("question_judgement", {}).get("is_appropriate", False)
                 is_ontopic = session.state.get("on_topic_judgement", {}).get("on_topic", False)
-                logging.info(event)
-                logging.info(
-                    "mid session state: %s", 
-                    json.dumps(session.state, indent=2)
-                )
+                # logging.info(event)
+                # logging.info(
+                #     "mid session state: %s", 
+                #     json.dumps(session.state, indent=2)
+                # )
                 if is_appropriate and is_ontopic:
-
                     return types.Content(
                         role="agent", 
                         parts=[types.Part(text=session.state["followup_question"])]

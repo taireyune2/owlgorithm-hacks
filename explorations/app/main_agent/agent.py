@@ -13,15 +13,39 @@
 # limitations under the License.
 
 from google.adk.agents import Agent
+from typing import AsyncGenerator, Optional
+from google.genai import types
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models import LlmResponse, LlmRequest
+
+
+def log_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
+   if callback_context.user_content and callback_context.user_content.parts:
+      print(f"Running before agent callback.\n{callback_context.user_content.parts[0].text}")
+   else:
+      print("Running before agent callback with no callback content.")
+
+
+def log_model_callback(
+   callback_context: CallbackContext, llm_request: LlmRequest
+) -> Optional[LlmResponse]:
+   if llm_request.contents and llm_request.contents.parts:
+      print(f"Running before model callback.\n{llm_request.contents.parts[0].text}")
+   else:
+      print("Running before model callback with no llm_request content.")
+
 
 root_agent = Agent(
    # A unique name for the agent.
    name="main_agent",
    # The Large Language Model (LLM) that agent will use.
-   model="gemini-2.0-flash-exp",
+   # model="gemini-2.0-flash-exp",
+   model="gemini-2.0-flash",
    # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
    # A short description of the agent's purpose.
    description="Agent to answer questions",
    # Instructions to set the agent's behavior.
-   instruction="You are a helpful assistant that answers user's questions",
+   instruction="You are a helpful assistant that answers user's questions. Your name is root agent.",
+   before_agent_callback=log_agent_callback,
+   before_model_callback=log_model_callback,
 )
