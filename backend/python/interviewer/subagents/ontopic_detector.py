@@ -1,12 +1,13 @@
 from google.adk.agents import LlmAgent
 from pydantic import BaseModel, Field
 
+from .. import utils
 
 class OnTopicJudgement(BaseModel):
     on_topic: bool = Field(default=False, description="Indicates whether the user's response is on-topic based on the interview question and topic.")
     explanation: str = Field(default="", description="Brief explanation if the response is off-topic.")
 
-
+# TODO: few shot example
 instruction = """
 You are a interviewer auditor/admin.
 You are responsible for detecting whether the user's response is on-topic or not.
@@ -50,4 +51,9 @@ agent = LlmAgent(
     output_schema=OnTopicJudgement,  
     disallow_transfer_to_parent=True,
     disallow_transfer_to_peers=True,
+    before_agent_callback=[utils.log_agent_context],
+    before_model_callback=[utils.log_before_model_context],
+    after_model_callback=[utils.log_after_model_context],
+    after_agent_callback=[utils.log_agent_context],
+    include_contents='none',
 )
