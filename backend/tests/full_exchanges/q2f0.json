@@ -1,0 +1,103 @@
+{
+  "conversation": [
+    {
+      "invocationId": 0,
+      "input": " ",
+      "output": "Hi, good morning! Thanks for joining us today. How are you doing?",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "greet",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 1,
+      "input": "Good morning! I’m doing well, thank you. I appreciate the opportunity to speak with you.",
+      "output": "Glad to hear it. I’m Alex Chen, a Senior Engineering Manager here at Atlas Tech. I’ve been with the company for about five years, mostly focused on platform and infrastructure teams.",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "introduction",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 2,
+      "input": "Nice to meet you, Alex. I’m Priya Mehta. I’m currently a backend engineer at Luna Systems, where I’ve been working on APIs and data integration for our logistics platform.",
+      "output": "Great. Let me quickly walk you through what to expect for today’s chat. We’ll spend about 30 minutes together. I have two main behavioral questions I’d like to ask. After that, I’ll leave a few minutes at the end for any questions you might have for me. Sound good?",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "agenda",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 3,
+      "input": "Sounds perfect. Let’s do it.",
+      "output": "First question: Tell me about a time when you had to work with a difficult stakeholder. How did you handle the situation?",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "question 1",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 4,
+      "input": "Sure. At Luna, we had a product manager who kept changing the API requirements mid-sprint. Initially, it was frustrating, but I set up a weekly sync with him to align earlier in the process. I also started documenting changes in a shared spec. Over time, we built better trust, and the last few sprints went much more smoothly.",
+      "output": "That’s a solid approach—proactive communication and documentation go a long way. Let's move on to the next question. Can you share an example of a time you made a mistake at work? What happened, and what did you learn from it?",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "question 2",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 6,
+      "input": "Definitely. I once deployed a config change without fully testing it in staging, and it caused a 20-minute outage for one of our internal services. I owned the mistake, sent a post-mortem, and added better pre-deployment checks to our pipeline. It was tough in the moment, but it pushed our team to improve overall release safety.",
+      "output": "Thanks for being candid—taking accountability and driving process improvement is exactly what we like to see. That wraps up the structured questions I had. Before we close, do you have any questions for me?",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "closing Q&A",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 8,
+      "input": "Yes, actually—how does your team typically collaborate across time zones? I saw the company has a global presence.",
+      "output": "Great question. We use a mix of async tools like Notion and Loom, and we try to limit live meetings to core overlapping hours. It’s not perfect, but it’s worked pretty well for engineering so far.",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "closing Q&A",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 9,
+      "input": "That’s good to hear. Thanks for sharing!",
+      "output": "Alright, Priya—thank you again for your time. We’ll be in touch within the next few days.",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "closing",
+        "phaseStart": "sometimestamp"
+      }
+    },
+    {
+      "invocationId": 10,
+      "input": "Thanks, Alex. I really enjoyed the conversation. Looking forward to hearing from you!",
+      "output": "Thank you! Have a nice day.",
+      "state": {
+        "resume": "asdf",
+        "jobDescription": "asdf",
+        "phase": "closing",
+        "phaseStart": "sometimestamp"
+      }
+    }
+  ]
+}

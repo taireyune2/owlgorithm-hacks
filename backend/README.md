@@ -13,16 +13,16 @@ pip install -r requirements.txt
 
 path: backend/python
 ```
-python console.py --config-dir ../configs/dev2.json
+python console.py --config-dir ../configs/console-dev-config.json
 ```
 
 When prompted to enter User ID, enter any random characters.  
 When prompted to provide text file response, enter `../examples/response.txt` for 
 the provided response.
 
-### unittest
+### pytest
 
 path: backend/python
 ```
-python -m unittest -v
+pytest
 ```
