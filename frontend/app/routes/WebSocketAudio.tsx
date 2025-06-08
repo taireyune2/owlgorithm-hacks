@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { startAudioPlayerWorklet } from "./audio-player";
 import { startAudioRecorderWorklet } from "./audio-recorder";
+import { useReactiveVar } from "@apollo/client";
+import { uploadResumeRawTextDataVar } from "./UploadResume";
+import { JobDescriptionVar } from "./JobDescriptionInput";
 
 interface Message {
   id: string;
@@ -14,18 +17,23 @@ export const WebSocketAudio = () => {
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
-
+  const resumeData = useReactiveVar(uploadResumeRawTextDataVar);
+  const jobDescriptionInput = useReactiveVar(JobDescriptionVar);
   const messagesDivRef = useRef<HTMLDivElement>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const audioPlayerNodeRef = useRef<AudioWorkletNode | null>(null);
   const wsUrlRef = useRef<string>("");
 
+  const [sessionIdStarted, setSessionIdStarted] = useState("");
   useEffect(() => {
     if (typeof window !== "undefined") {
       const sessionId = Math.random().toString().substring(10);
+      setSessionIdStarted(sessionId);
       wsUrlRef.current = `ws://localhost:8000/ws/${sessionId}`;
     }
   }, []);
+
+  console.log("session id", sessionIdStarted);
 
   const base64ToArray = (base64: string): ArrayBuffer => {
     const binaryString = window.atob(base64);
@@ -142,19 +150,27 @@ export const WebSocketAudio = () => {
 
     try {
       const ws = await connectWebsocket();
-      // const payload = {
-      //   resume: resumeData,
-      //   jobDescription: jobDescriptionInput,
-      //   sessionId: wsUrlRef.current.split("/").pop(),
-      // };
+      const payload = {
+        resume: {
+          rawText: resumeData,
+          email: null,
+          phone: null,
+        },
+        job_description: {
+          rawText: jobDescriptionInput,
+          link: null,
+        },
+        session_id: sessionIdStarted,
+      };
 
-      // await fetch(`/api/resume?`, {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify(payload),
-      // });
+      //TODO - CHANGE URL TO YOUR BACKEND
+      await fetch(`http://localhost:8000/upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       const [playerNode] = await startAudioPlayerWorklet();
       audioPlayerNodeRef.current = playerNode;
@@ -170,7 +186,7 @@ export const WebSocketAudio = () => {
         }
       });
     } catch (error) {
-      console.error("❌ Failed to start audio session:", error);
+      console.error(" Failed to start audio session:", error);
       setMicStatus("Mic/websocket error");
       setIsRecording(false);
     }
