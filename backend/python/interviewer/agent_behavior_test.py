@@ -60,3 +60,37 @@ async def test_introduction():
     for user, agent in zip(messages, results):
         logging.info(f"User: {user}")
         logging.info(f"Agent: {agent}")
+
+
+async def test_core():
+    configs, session_service, runner = setup()
+    with open(os.path.join(TEST_FOLDER, "inputs/core/expected.json"), "r") as f:
+        data = json.load(f)
+
+    user_id = "123"
+    session_id = user_id
+
+    session = await session_service.create_session(
+        app_name=configs["name"],
+        user_id=user_id,
+        session_id=session_id,
+        state=data["initial_state"],
+    )
+
+    results = []
+    messages = ["", *data["inputs"]]
+    for message in messages:
+        async for event in runner.run_async(
+            user_id=user_id,
+            session_id=session_id,
+            new_message=types.Content(
+                role="user",
+                parts=[types.Part(text=message)]
+            )
+        ):
+            if event.is_final_response():
+                results.append(event.content.parts[0].text)
+
+    for user, agent in zip(messages, results):
+        logging.info(f"User: {user}")
+        logging.info(f"Agent: {agent}")

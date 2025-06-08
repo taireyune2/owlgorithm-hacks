@@ -8,7 +8,7 @@ def next_step(tool_context: ToolContext) -> None:
     """
     if tool_context.state["phase"] == "overview":
         tool_context.state["phase"] = "behavioral_question"
-        tool_context.actions.escalate = True
+        tool_context.actions.transfer_to_agent = "behavioral_questioner"
 
 next_step_tool = FunctionTool(func=next_step)
 
@@ -18,9 +18,9 @@ You shall provide the interviewee with an overview of what to expect in the rest
 
 The interview will consist of a few questions to understand how the interviewee thinks, collaborates, and navigates real-world challenges. (1 to 2 behavioral questions and takes about 10 minutes). There will not be any technical questions. There shall be some time at the end for the interviewee to ask questions.
 
-Ask whether the interviewee understands the expectations. Rephrase and clarify if asked by the interviewee.
+Ask whether the interviewee is ready to continue. If the interviewee confirms or is ready for the next step, call the 'next_step_tool' to continue.
 
-If the interviewee is ready, proceed to the next phase by calling the 'next_step_tool'.
+Otherwise, if the interviewee asks to clarify, please reply with a rephrase of the overview.
 """
 
 agent = LlmAgent(
