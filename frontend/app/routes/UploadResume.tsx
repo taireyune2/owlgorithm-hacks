@@ -63,15 +63,6 @@ export const UploadResume = ({ resumeData }: { resumeData?: string }) => {
       alert("An error occurred while processing the PDF.");
     }
   };
-
-  // console.log("Parsed Data:", parseData.rawText);
-  // Send to backend
-  //   await fetch("/api/resume", {
-  //     method: "POST",
-  //     headers: { "Content-Type": "application/json" },
-  //     body: JSON.stringify(parseData.rawText),
-  //   });
-  // };
   return (
     <div className="flex items-center justify-between ml-3 w-[500px]">
       <div className="text-lg font-bold">
