@@ -9,5 +9,9 @@
     },
     "agent": {
         "name": "OwlSpeak"
+    }, 
+    "api": {
+        "root_path": "",
+        "cors": ["*"]
     }
 }
