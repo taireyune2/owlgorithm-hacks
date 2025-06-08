@@ -1,10 +1,11 @@
 import type { MetaFunction } from "@remix-run/node";
 import { WebSocketAudio } from "./WebSocketAudio";
-import { UploadResume } from "./UploadResume";
-import { JobDescriptionInput } from "./JobDescriptionInput";
+import { UploadResume, uploadResumeRawTextDataVar } from "./UploadResume";
+import { JobDescriptionInput, JobDescriptionVar } from "./JobDescriptionInput";
 import { Button } from "@mui/material";
 import { StartSession } from "./StartSession";
 import { useState } from "react";
+import { useReactiveVar } from "@apollo/client";
 
 export const meta: MetaFunction = () => {
   return [
@@ -15,6 +16,8 @@ export const meta: MetaFunction = () => {
 
 export default function Index() {
   const [startSession, setStartSession] = useState(false);
+  const resumeData = useReactiveVar(uploadResumeRawTextDataVar);
+  const jobDescriptionInput = useReactiveVar(JobDescriptionVar);
   return (
     <div className="flex flex-row w-full h-screen bg-gray-100 gap-[200px]">
       <div className="flex flex-col mx-4  my-4 px-4 pb-20 h-96 w-[600px]">
@@ -29,7 +32,10 @@ export default function Index() {
           <JobDescriptionInput />
         </div>
         <div>
-          <StartSession onStartSession={() => setStartSession(true)} />
+          <StartSession
+            disabled={!!resumeData && !!jobDescriptionInput ? false : true}
+            onStartSession={() => setStartSession(true)}
+          />
         </div>
       </div>
 
