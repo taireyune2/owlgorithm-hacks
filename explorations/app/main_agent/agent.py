@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.adk.agents import Agent
+from google.adk.agents import LlmAgent
 from typing import AsyncGenerator, Optional
 from google.genai import types
 from google.adk.agents.callback_context import CallbackContext
@@ -35,17 +35,17 @@ def log_model_callback(
       print("Running before model callback with no llm_request content.")
 
 
-root_agent = Agent(
+root_agent = LlmAgent(
    # A unique name for the agent.
    name="main_agent",
    # The Large Language Model (LLM) that agent will use.
    # model="gemini-2.0-flash-exp",
-   model="gemini-2.0-flash",
+   model="gemini-2.0-flash-exp",
    # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
    # A short description of the agent's purpose.
    description="Agent to answer questions",
    # Instructions to set the agent's behavior.
    instruction="You are a helpful assistant that answers user's questions. Your name is root agent.",
-   before_agent_callback=log_agent_callback,
-   before_model_callback=log_model_callback,
+   # before_agent_callback=log_agent_callback,
+   # before_model_callback=log_model_callback,
 )
