@@ -27,17 +27,19 @@ const sessionId = Math.random().toString().substring(10);
 const ws_url =
   "ws://" + window.location.host + "/ws/" + sessionId;
 let websocket = null;
-let is_audio = false;
 
 // Get DOM elements
 const messageForm = document.getElementById("messageForm");
 const messageInput = document.getElementById("message");
 const messagesDiv = document.getElementById("messages");
 let currentMessageId = null;
+let isRecording = false;
+const micStatus = document.getElementById('mic-status');
 
 // WebSocket handlers
 function connectWebsocket() {
   // Connect websocket
+  let is_audio = true;
   websocket = new WebSocket(ws_url + "?is_audio=" + is_audio);
 
   // Handle connection open
@@ -45,10 +47,6 @@ function connectWebsocket() {
     // Connection opened messages
     console.log("WebSocket connection opened.");
     document.getElementById("messages").textContent = "Connection opened";
-
-    // Enable the Send button
-    document.getElementById("sendButton").disabled = false;
-    addSubmitHandler();
   };
 
   // Handle incoming messages
@@ -69,7 +67,7 @@ function connectWebsocket() {
 
     // If it's audio, play it
     if (message_from_server.mime_type == "audio/pcm" && audioPlayerNode) {
-      audioPlayerNode.port.postMessage(base64ToArray(message_from_server.data));
+      audioPlayerNode.port.postMessage(_base64ToArray(message_from_server.data));
     }
 
     // If it's a text, print it
@@ -95,52 +93,12 @@ function connectWebsocket() {
   // Handle connection close
   websocket.onclose = function () {
     console.log("WebSocket connection closed.");
-    document.getElementById("sendButton").disabled = true;
     document.getElementById("messages").textContent = "Connection closed";
   };
 
   websocket.onerror = function (e) {
     console.log("WebSocket error: ", e);
   };
-}
-
-// Add submit handler to the form
-function addSubmitHandler() {
-  messageForm.onsubmit = function (e) {
-    e.preventDefault();
-    const message = messageInput.value;
-    if (message) {
-      const p = document.createElement("p");
-      p.textContent = "> " + message;
-      messagesDiv.appendChild(p);
-      messageInput.value = "";
-      sendMessage({
-        mime_type: "text/plain",
-        data: message,
-      });
-      console.log("[CLIENT TO AGENT] " + message);
-    }
-    return false;
-  };
-}
-
-// Send a message to the server as a JSON string
-function sendMessage(message) {
-  if (websocket && websocket.readyState == WebSocket.OPEN) {
-    const messageJson = JSON.stringify(message);
-    websocket.send(messageJson);
-  }
-}
-
-// Decode Base64 data to Array
-function base64ToArray(base64) {
-  const binaryString = window.atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
 
 /**
@@ -164,8 +122,23 @@ function startAudio() {
     audioPlayerNode = node;
     audioPlayerContext = ctx;
   });
+
   // Start audio input
-  startAudioRecorderWorklet(audioRecorderHandler).then(
+  startAudioRecorderWorklet(
+    // Audio recorder handler
+    function audioRecorderHandler(pcmData) {
+      // Send the pcm data as base64
+      // Send a message to the server as a JSON string
+      if (websocket && websocket.readyState == WebSocket.OPEN) {
+        const messageJson = JSON.stringify({
+          mime_type: "audio/pcm",
+          data: _arrayBufferToBase64(pcmData),
+        });
+        websocket.send(messageJson);
+      }
+      console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
+    }
+  ).then(
     ([node, ctx, stream]) => {
       audioRecorderNode = node;
       audioRecorderContext = ctx;
@@ -178,24 +151,40 @@ function startAudio() {
 // (due to the gesture requirement for the Web Audio API)
 const startAudioButton = document.getElementById("startAudioButton");
 startAudioButton.addEventListener("click", () => {
-  startAudioButton.disabled = true;
-  startAudio();
-  is_audio = true;
-  connectWebsocket(); // reconnect with the audio mode
+  if (!isRecording) {
+    startAudioButton.disabled = true;
+    startAudio();
+    connectWebsocket(); // reconnect with the audio mode
+    isRecording = true;
+    startAudioButton.classList.add('mic-active');
+    micStatus.textContent = 'Recording... Speak now';
+  }
 });
 
-// Audio recorder handler
-function audioRecorderHandler(pcmData) {
-  // Send the pcm data as base64
-  sendMessage({
-    mime_type: "audio/pcm",
-    data: arrayBufferToBase64(pcmData),
-  });
-  console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
+// End button handler
+const endButton = document.getElementById('end-button');
+endButton.addEventListener('click', () => {
+  if (isRecording) {
+    isRecording = false;
+    startAudioButton.classList.remove('mic-active');
+    micStatus.textContent = 'Click the icon to start recording';
+  }
+});
+
+
+// Decode Base64 data to Array
+function _base64ToArray(base64) {
+  const binaryString = window.atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 }
 
 // Encode an array buffer with Base64
-function arrayBufferToBase64(buffer) {
+function _arrayBufferToBase64(buffer) {
   let binary = "";
   const bytes = new Uint8Array(buffer);
   const len = bytes.byteLength;
