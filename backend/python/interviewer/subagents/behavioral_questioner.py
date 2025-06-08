@@ -25,13 +25,11 @@ def get_next_question(tool_context: ToolContext) -> dict[str, str]:
     #     })
     #     tool_context.state["previous_states"] = previous_states
 
-    ### navigate to closing phase
-    if tool_context.state["question_count"] < 1: 
+    if not _interview_questions: 
         raise ValueError("No more questions available.")
     
     ### get question
-    tool_context.state["question_count"] -= 1
-    question = _interview_questions.pop()
+    question = _interview_questions[-1]
     tool_context.state["behavioral_question"] = question
     return {
         "behavioral_question": question
