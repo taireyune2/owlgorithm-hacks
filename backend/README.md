@@ -20,9 +20,17 @@ When prompted to enter User ID, enter any random characters.
 When prompted to provide text file response, enter `../examples/response.txt` for 
 the provided response.
 
+## Run Service
+
+```
+python service.py --config-dir ../configs/dev.json
+```
+
 ### pytest
 
 path: backend/python
 ```
 pytest
 ```
+
+
