@@ -170,6 +170,7 @@ class JobDescription(BaseModel):
     rawText: str
 
 class UserInfo(BaseModel):
+    session_id: int
     resume: Resume
     job_description: JobDescription
 
@@ -189,12 +190,13 @@ async def root():
     """Serves the index.html"""
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-@app.post("/user/{user_id}/upload")
-async def upload_resume(user_id: int, request: UserInfo):
+@app.post("/upload")
+async def upload_resume(request: UserInfo):
+    session_id = request.session_id
     resume = request.resume,
     jobDescription = request.job_description
 
-    print(f"Session ID: {user_id}")
+    print(f"Session ID: {session_id}")
     print(f"Email: {request.resume.email}")
     print(f"Phone: {request.resume.phone}")
     print(f"Raw Text: {request.resume.rawText[:100]}...")  # Print first 100 characters
@@ -202,7 +204,7 @@ async def upload_resume(user_id: int, request: UserInfo):
     print(f"Description: {request.job_description.rawText[:100]}...")  # Print first 100 characters
 
     # Placeholder logic to handle the uploaded data
-    return {"status": "success", "user_id": user_id}
+    return {"status": "success", "session_id": session_id}
 
 
 @app.websocket("/ws/{user_id}")
