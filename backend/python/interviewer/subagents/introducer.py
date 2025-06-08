@@ -4,13 +4,13 @@ from google.genai import types
 
 
 def next_step(interviewee_response: str,tool_context: ToolContext) -> None:
-    """
-    Progress the conversation to the next phase.
-    """
-    if tool_context.state["phase"] == "introduction":
-        tool_context.state["self_introduction"] = interviewee_response
-        tool_context.state["phase"] = "overview"
-        tool_context.actions.transfer_to_agent = "overviewer"
+  """
+  Progress the conversation to the next phase.
+  """
+  if tool_context.state["phase"] == "introduction":
+    tool_context.state["self_introduction"] = interviewee_response
+    tool_context.state["phase"] = "overview"
+    tool_context.actions.transfer_to_agent = "overviewer"
 
 next_step_tool = FunctionTool(func=next_step)
 
@@ -31,12 +31,12 @@ If the interviewee provided a satisfactory self-introduction, you can proceed to
 """
 
 agent = LlmAgent(
-    name="introducer",
-    description="Provide a self-introduction and elicit the interviewee's self-introduction.",
-    model="gemini-2.0-flash",
-    instruction=_instruction,
-    tools=[next_step_tool], 
-    generate_content_config=types.GenerateContentConfig(
-        temperature=2.0
-    ),
+  name="introducer",
+  description="Provide a self-introduction and elicit the interviewee's self-introduction.",
+  model="gemini-2.0-flash",
+  instruction=_instruction,
+  tools=[next_step_tool], 
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0
+  ),
 )
