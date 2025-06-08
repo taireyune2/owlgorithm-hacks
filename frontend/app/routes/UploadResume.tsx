@@ -1,8 +1,10 @@
 import { Button } from "@mui/material";
 import { UploadCloudIcon, UploadIcon } from "lucide-react";
 import { useState } from "react";
+import { makeVar } from "@apollo/client";
 
-export const UploadResume = () => {
+export const uploadResumeRawTextDataVar = makeVar<string | null>(null);
+export const UploadResume = ({ resumeData }: { resumeData?: string }) => {
   const [parseData, setParseData] = useState<any>(null);
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,14 +48,15 @@ export const UploadResume = () => {
       };
 
       const resumeJson = extractData(fullText);
-      // Send to backend
-      await fetch("/api/resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resumeJson),
-      });
+      // // Send to backend
+      // await fetch("/api/resume", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify(resumeJson),
+      // });
 
       setParseData(resumeJson);
+      uploadResumeRawTextDataVar(resumeJson.rawText);
       console.log("Parsed Resume:", resumeJson);
     } catch (error) {
       console.error("Failed to parse PDF:", error);

@@ -1,9 +1,12 @@
+import { makeVar } from "@apollo/client";
 import { TextField } from "@mui/material";
 import { NotebookIcon } from "lucide-react";
 import { useState } from "react";
 
+export const JobDescriptionVar = makeVar<string | null>(null);
 export const JobDescriptionInput = () => {
   const [jobDescriptionInput, setJobDescriptionInput] = useState("");
+  JobDescriptionVar(jobDescriptionInput);
   console.log("Job Description Input:", jobDescriptionInput);
   return (
     <div className="flex items-center justify-between ml-3 w-[500px]">

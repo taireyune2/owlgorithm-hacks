@@ -17,7 +17,7 @@ import json
 import asyncio
 import base64
 import warnings
-
+from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from dotenv import load_dotenv
 from google.genai import types
@@ -39,7 +39,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from main_agent.agent import root_agent
-
+from ConnectionManager import ConnectionManager
 #
 # ADK Streaming
 #
@@ -160,7 +160,7 @@ async def client_to_agent_messaging(websocket, live_request_queue):
 ########################## POJO #################################
 # Upload resume endpoint
 class Resume(BaseModel):
-    email: str
+    email: Optional[str]
     phone: Optional[str]
     rawText: str
 
@@ -169,7 +169,7 @@ class JobDescription(BaseModel):
     rawText: str
 
 class UserInfo(BaseModel):
-    session_id: int
+    session_id: str
     resume: Resume
     job_description: JobDescription
 
@@ -188,6 +188,14 @@ manager = ConnectionManager()
 async def root():
     """Serves the index.html"""
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # ✅ allow Vite dev server
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/upload")
 async def upload_resume(request: UserInfo):
