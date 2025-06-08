@@ -1,0 +1,17 @@
+{
+    "logging": {
+        "level": 20,
+        "env": "dev",
+        "file": {
+            "path": "../logs"
+        },
+        "console": {}
+    },
+    "agent": {
+        "name": "OwlSpeak"
+    }, 
+    "api": {
+        "root_path": "",
+        "cors": ["*"]
+    }
+}

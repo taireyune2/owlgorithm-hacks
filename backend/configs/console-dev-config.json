@@ -1,0 +1,12 @@
+{
+    "logging": {
+        "level": 20,
+        "env": "dev",
+        "file": {
+            "path": "../logs"
+        }
+    },
+    "agent": {
+        "name": "OwlSpeak"
+    }
+}
