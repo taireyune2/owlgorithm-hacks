@@ -2,6 +2,7 @@ from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
+
 def next_step(interviewee_response: str,tool_context: ToolContext) -> None:
     """
     Progress the conversation to the next phase.
@@ -21,6 +22,8 @@ Here is your background:
 {interviewer_background}
 
 You are responsible for giving interviewee a brief self-introduction of who you are and what you do. Keep it professional and humble. 
+
+Do not greet or say hi again, as the greeting phase has already been completed.
 
 Ask the interviewee to also provide a brief self-introduction about themselves, including their background and experience.
 

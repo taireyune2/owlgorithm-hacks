@@ -10,7 +10,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.events import Event
 from google.genai import types
 
-from .subagents import  greeter, introducer, overviewer
+from .subagents import  behavioral_questioner, greeter, introducer, overviewer
 
 
 class InterviewerAgent(BaseAgent):
@@ -23,20 +23,23 @@ class InterviewerAgent(BaseAgent):
     introducer: LlmAgent
     greeter: LlmAgent
     overviewer: LlmAgent
-    
+    behavioral_questioner: LlmAgent
+
     def __init__(
         self, 
         greeter: LlmAgent,
         introducer: LlmAgent,
         overviewer: LlmAgent,
+        behavioral_questioner: LlmAgent,
         name: str = "interviewer",
     ):
         super().__init__(
             greeter=greeter,
             introducer=introducer,
             overviewer=overviewer,
+            behavioral_questioner=behavioral_questioner,
             name=name,
-            sub_agents=[greeter, introducer, overviewer],
+            sub_agents=[greeter, introducer, overviewer, behavioral_questioner  ],
             description="Route agents based on the interview phase.",
         )
 
@@ -54,11 +57,16 @@ class InterviewerAgent(BaseAgent):
         if ctx.session.state["phase"] == "overview":
             async for event in self.overviewer.run_async(ctx):
                 yield event
+        if ctx.session.state["phase"] == "behavioral_question":
+            async for event in self.behavioral_questioner.run_async(ctx):
+                yield event
+
 
 
 root_agent = InterviewerAgent(
     greeter.agent,
     introducer.agent,
     overviewer.agent,
+    behavioral_questioner.agent,  
     name="root_agent"
 )
