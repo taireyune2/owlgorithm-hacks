@@ -67,6 +67,6 @@ root_agent = InterviewerAgent(
     greeter.agent,
     introducer.agent,
     overviewer.agent,
-    behavioral_questioner.agent,  
+    behavioral_questioner.agent,
     name="root_agent"
 )

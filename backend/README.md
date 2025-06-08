@@ -6,7 +6,7 @@ path: backend/
 python3 -m venv .venv
 source .venv/bin/activate
 which python
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Console Demo

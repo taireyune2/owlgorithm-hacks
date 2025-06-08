@@ -30,7 +30,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from dummy_agent.agent import root_agent
-
+# from .agent import root_agent
 
 APP_NAME = "ADK Streaming example"
 
