@@ -30,7 +30,7 @@ python service.py --config-dir ../configs/dev.json
 
 path: backend/python
 ```
-pytest
+pytest interviewer/agent_behavior_test.py::test_core
 ```
 
 
