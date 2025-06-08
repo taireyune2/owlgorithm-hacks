@@ -1,29 +1,26 @@
-/**
- * Audio Player Worklet
- */
+export async function startAudioRecorderWorklet(
+  callback: (pcmData: ArrayBuffer) => void
+): Promise<[AudioWorkletNode, AudioContext, MediaStream]> {
+  const audioContext = new AudioContext({
+    sampleRate: 24000,
+  });
 
-export async function startAudioRecorderWorklet(callback: (pcmData: ArrayBuffer) => void): Promise<[AudioWorkletNode, AudioContext]> {
-    // 1. Create an AudioContext
-    const audioContext = new AudioContext({
-      sampleRate: 24000,
-    });
-  
-    // 2. Load your custom processor code
-    const workletURL = new URL('/worklets/pcm-player-processor.js', window.location.origin);
-    await audioContext.audioWorklet.addModule(workletURL);
-  
-    // 3. Create an AudioWorkletNode
-    const audioPlayerNode = new AudioWorkletNode(audioContext, 'pcm-player-processor');
-  
-    // 4. Connect to the destination
-    audioPlayerNode.connect(audioContext.destination);
+  // ✅ Use the correct recorder processor
+  const workletURL = new URL('/worklets/pcm-recorder-processor.js', window.location.origin);
+  await audioContext.audioWorklet.addModule(workletURL);
 
-    // Example of invoking the callback with PCM data
-    // This is a placeholder; replace with actual PCM data handling
-    const examplePcmData = new ArrayBuffer(0); // Replace with actual PCM data
-    callback(examplePcmData);
-  
-    // Return the created node and context
-    return [audioPlayerNode, audioContext];
-  }
-  
+  const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const source = audioContext.createMediaStreamSource(micStream);
+
+  const recorderNode = new AudioWorkletNode(audioContext, 'pcm-recorder-processor');
+
+  // ✅ Get data from processor and pass to callback
+  recorderNode.port.onmessage = (event) => {
+    const pcmData = event.data as ArrayBuffer;
+    callback(pcmData);
+  };
+
+  source.connect(recorderNode); // Connect mic to processor
+
+  return [recorderNode, audioContext, micStream];
+}

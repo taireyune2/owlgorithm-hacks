@@ -5,7 +5,7 @@
             const audioContext = new AudioContext();
 
             // Load the audio worklet module
-            await audioContext.audioWorklet.addModule('/app/routes/pcm-player-processor.js');
+            await audioContext.audioWorklet.addModule('/worklets/pcm-player-processor.js');
 
             // Create an AudioWorkletNode
             const audioPlayerNode = new AudioWorkletNode(audioContext, 'pcm-player-processor');

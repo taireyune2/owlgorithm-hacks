@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { startAudioPlayerWorklet } from './audio-player';
-import { startAudioRecorderWorklet } from './audio-recorder';
+import { useState, useRef, useEffect } from "react";
+import { startAudioPlayerWorklet } from "./audio-player";
+import { startAudioRecorderWorklet } from "./audio-recorder";
 
 interface Message {
   id: string;
@@ -9,18 +9,19 @@ interface Message {
 
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [micStatus, setMicStatus] = useState('Click the icon to start recording');
+  const [micStatus, setMicStatus] = useState(
+    "Click the icon to start recording"
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
 
   const messagesDivRef = useRef<HTMLDivElement>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const audioPlayerNodeRef = useRef<AudioWorkletNode | null>(null);
-  const wsUrlRef = useRef<string>('');
+  const wsUrlRef = useRef<string>("");
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-
+    if (typeof window !== "undefined") {
       const sessionId = Math.random().toString().substring(10);
       wsUrlRef.current = `ws://localhost:8000/ws/${sessionId}`;
     }
@@ -37,7 +38,7 @@ export const WebSocketAudio = () => {
   };
 
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-    let binary = '';
+    let binary = "";
     const bytes = new Uint8Array(buffer);
     for (let i = 0; i < bytes.byteLength; i++) {
       binary += String.fromCharCode(bytes[i]);
@@ -45,61 +46,76 @@ export const WebSocketAudio = () => {
     return window.btoa(binary);
   };
 
-  const connectWebsocket = () => {
-    if (!wsUrlRef.current) return;
+  const connectWebsocket = (): Promise<WebSocket> => {
+    return new Promise((resolve, reject) => {
+      if (!wsUrlRef.current) return reject("No WebSocket URL");
 
-    const ws = new WebSocket(`${wsUrlRef.current}?is_audio=true`);
+      const ws = new WebSocket(`${wsUrlRef.current}?is_audio=true`);
 
-    ws.onopen = () => {
-      console.log('WebSocket connection opened.');
-      setMessages([{ id: 'status', text: 'Connection opened' }]);
-    };
+      ws.onopen = () => {
+        console.log("WebSocket connection opened.");
+        setMessages([{ id: "status", text: "Connection opened" }]);
+        resolve(ws);
+      };
 
-    ws.onmessage = (event) => {
-      const message_from_server = JSON.parse(event.data);
-      console.log('[AGENT TO CLIENT]', message_from_server);
+      ws.onmessage = (event) => {
+        const message_from_server = JSON.parse(event.data);
+        console.log("[AGENT TO CLIENT]", message_from_server);
+        console.log("[RAW MESSAGE]", event.data);
 
-      if (message_from_server.turn_complete) {
-        currentMessageIdRef.current = null;
-        return;
-      }
-
-      if (message_from_server.mime_type === 'audio/pcm' && audioPlayerNodeRef.current) {
-        audioPlayerNodeRef.current.port.postMessage(base64ToArray(message_from_server.data));
-      }
-
-      if (message_from_server.mime_type === 'text/plain') {
-        if (!currentMessageIdRef.current) {
-          currentMessageIdRef.current = Math.random().toString(36).substring(7);
-          setMessages((prev) => [...prev, { id: currentMessageIdRef.current!, text: '' }]);
+        if (message_from_server.turn_complete) {
+          currentMessageIdRef.current = null;
+          return;
         }
 
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === currentMessageIdRef.current
-              ? { ...msg, text: msg.text + message_from_server.data }
-              : msg
-          )
-        );
+        if (
+          message_from_server.mime_type === "audio/pcm" &&
+          audioPlayerNodeRef.current
+        ) {
+          audioPlayerNodeRef.current.port.postMessage(
+            base64ToArray(message_from_server.data)
+          );
+        }
 
-        setTimeout(() => {
-          if (messagesDivRef.current) {
-            messagesDivRef.current.scrollTop = messagesDivRef.current.scrollHeight;
+        if (message_from_server.mime_type === "text/plain") {
+          if (!currentMessageIdRef.current) {
+            currentMessageIdRef.current = Math.random()
+              .toString(36)
+              .substring(7);
+            setMessages((prev) => [
+              ...prev,
+              { id: currentMessageIdRef.current!, text: "" },
+            ]);
           }
-        }, 0);
-      }
-    };
 
-    ws.onclose = () => {
-      console.log('WebSocket connection closed.');
-      setMessages([{ id: 'status', text: 'Connection closed' }]);
-    };
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === currentMessageIdRef.current
+                ? { ...msg, text: msg.text + message_from_server.data }
+                : msg
+            )
+          );
 
-    ws.onerror = (e) => {
-      console.log('WebSocket error:', e);
-    };
+          setTimeout(() => {
+            messagesDivRef.current?.scrollTo({
+              top: messagesDivRef.current.scrollHeight,
+            });
+          }, 0);
+        }
+      };
 
-    setWebsocket(ws);
+      ws.onerror = (e) => {
+        console.error("WebSocket error:", e);
+        reject(e);
+      };
+
+      ws.onclose = () => {
+        console.log("WebSocket connection closed.");
+        setMessages([{ id: "status", text: "Connection closed" }]);
+      };
+
+      setWebsocket(ws); // set to React state
+    });
   };
 
   const startAudio = async () => {
@@ -109,44 +125,85 @@ export const WebSocketAudio = () => {
     await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
       if (websocket && websocket.readyState === WebSocket.OPEN) {
         const messageJson = JSON.stringify({
-          mime_type: 'audio/pcm',
+          mime_type: "audio/pcm",
           data: arrayBufferToBase64(pcmData),
         });
         websocket.send(messageJson);
-        console.log('[CLIENT TO AGENT] sent %s bytes', pcmData.byteLength);
+        console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
       }
     });
   };
 
-  const handleStartAudio = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setMicStatus('Recording... Speak now');
-      startAudio();
-      connectWebsocket();
+  const handleStartAudio = async () => {
+    if (isRecording) return;
+
+    setIsRecording(true);
+    setMicStatus("Recording... Speak now");
+
+    try {
+      const ws = await connectWebsocket();
+      // const payload = {
+      //   resume: resumeData,
+      //   jobDescription: jobDescriptionInput,
+      //   sessionId: wsUrlRef.current.split("/").pop(),
+      // };
+
+      // await fetch(`/api/resume?`, {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify(payload),
+      // });
+
+      const [playerNode] = await startAudioPlayerWorklet();
+      audioPlayerNodeRef.current = playerNode;
+
+      await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          const messageJson = JSON.stringify({
+            mime_type: "audio/pcm",
+            data: arrayBufferToBase64(pcmData),
+          });
+          ws.send(messageJson);
+          console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
+        }
+      });
+    } catch (error) {
+      console.error("❌ Failed to start audio session:", error);
+      setMicStatus("Mic/websocket error");
+      setIsRecording(false);
     }
   };
 
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
-      setMicStatus('Click the icon to start recording');
+      setMicStatus("Click the icon to start recording");
+      if (websocket) {
+        websocket.close(1000, "Session ended by user");
+        setWebsocket(null);
+      }
     }
   };
 
   return (
     <div className="max-w-xl mx-auto p-6">
-      <h2 className="text-2xl font-bold text-center mb-4">🎧 Live Audio Chat</h2>
+      <h2 className="text-2xl font-bold text-center mb-4 text-gray-600">
+        Live Audio Chat
+      </h2>
 
       <div className="flex gap-4 mb-4">
         <button
           onClick={handleStartAudio}
           disabled={isRecording}
           className={`flex-1 py-2 rounded ${
-            isRecording ? 'bg-red-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
+            isRecording
+              ? "bg-red-500 cursor-not-allowed"
+              : "bg-green-500 hover:bg-green-600"
           } text-white font-semibold transition-colors duration-200`}
         >
-          {isRecording ? 'Recording...' : 'Start Recording'}
+          {isRecording ? "Recording..." : "Start Recording"}
         </button>
 
         <button
@@ -164,7 +221,9 @@ export const WebSocketAudio = () => {
         className="border border-gray-300 rounded p-2 h-48 overflow-y-auto bg-gray-50 text-sm"
       >
         {messages.map((msg) => (
-          <p key={msg.id} className="mb-1">{msg.text}</p>
+          <p key={msg.id} className="mb-1">
+            {msg.text}
+          </p>
         ))}
       </div>
     </div>
