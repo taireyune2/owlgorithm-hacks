@@ -153,18 +153,18 @@ router = APIRouter(
 ########################## POJO #################################
 # Upload resume endpoint
 class Resume(BaseModel):
-  email: str
-  phone: Optional[str]
-  rawText: str
+    email: Optional[str]
+    phone: Optional[str]
+    rawText: str
 
 class JobDescription(BaseModel):
   link: Optional[str]
   rawText: str
 
 class UserInfo(BaseModel):
-  session_id: int
-  resume: Resume
-  job_description: JobDescription
+    session_id: str
+    resume: Resume
+    job_description: JobDescription
 
 
 class ConnectionManager:
@@ -190,17 +190,19 @@ manager = ConnectionManager()
 
 
 @router.post("/upload")
-async def upload_material(user_info: UserInfo):
+async def upload_material(request: UserInfo):
+    session_id = request.session_id
+    resume = request.resume,
+    jobDescription = request.job_description
+    print(f"Session ID: {session_id}")
+    print(f"Email: {request.resume.email}")
+    print(f"Phone: {request.resume.phone}")
+    print(f"Raw Text: {request.resume.rawText[:100]}...")  # Print first 100 characters
+    print(f"Job Link: {request.job_description.link}")  # Print first 100 characters
+    print(f"Description: {request.job_description.rawText[:100]}...")  # Print first 100 characters
 
-  print(f"Session ID: {user_info.session_id}")
-  print(f"Email: {user_info.resume.email}")
-  print(f"Phone: {user_info.resume.phone}")
-  print(f"Raw Text: {user_info.resume.rawText[:100]}...")  # Print first 100 characters
-  print(f"Job Link: {user_info.job_description.link}")  # Print first 100 characters
-  print(f"Description: {user_info.job_description.rawText[:100]}...")  # Print first 100 characters
-
-  # Placeholder logic to handle the uploaded data
-  return {"status": "success", "session_id": user_info.session_id}
+    # Placeholder logic to handle the uploaded data
+    return {"status": "success", "session_id": request.session_id}
 
 
 @router.post("/")
