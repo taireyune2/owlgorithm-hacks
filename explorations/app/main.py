@@ -34,6 +34,9 @@ from google.adk.agents.run_config import RunConfig
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi import Request
+from pydantic import BaseModel
+from typing import Optional
 
 from ConnectionManager import ConnectionManager
 from main_agent.agent import root_agent
@@ -154,10 +157,25 @@ async def client_to_agent_messaging(websocket, live_request_queue):
             raise ValueError(f"Mime type not supported: {mime_type}")
 
 
+
+########################## POJO #################################
+# Upload resume endpoint
+class Resume(BaseModel):
+    email: str
+    phone: Optional[str]
+    rawText: str
+
+class JobDescription(BaseModel):
+    link: Optional[str]
+    rawText: str
+
+class UserInfo(BaseModel):
+    resume: Resume
+    job_description: JobDescription
+
 #
 # FastAPI web app
 #
-
 app = FastAPI()
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -170,6 +188,21 @@ manager = ConnectionManager()
 async def root():
     """Serves the index.html"""
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+@app.post("/user/{user_id}/upload")
+async def upload_resume(user_id: int, request: UserInfo):
+    resume = request.resume,
+    jobDescription = request.job_description
+
+    print(f"Session ID: {user_id}")
+    print(f"Email: {request.resume.email}")
+    print(f"Phone: {request.resume.phone}")
+    print(f"Raw Text: {request.resume.rawText[:100]}...")  # Print first 100 characters
+    print(f"Job Link: {request.job_description.link}")  # Print first 100 characters
+    print(f"Description: {request.job_description.rawText[:100]}...")  # Print first 100 characters
+
+    # Placeholder logic to handle the uploaded data
+    return {"status": "success", "user_id": user_id}
 
 
 @app.websocket("/ws/{user_id}")
