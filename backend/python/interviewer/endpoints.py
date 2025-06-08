@@ -1,16 +1,7 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect
+from pydantic import BaseModel
+from typing import Optional
+import json
 
 import os
 import json
@@ -38,14 +29,8 @@ from fastapi import Request
 from pydantic import BaseModel
 from typing import Optional
 
-from main_agent.agent import root_agent
-
-#
-# ADK Streaming
-#
-
-# Load Gemini API Key
-load_dotenv()
+from dummy_agent.agent import root_agent
+# from .agent import root_agent
 
 APP_NAME = "ADK Streaming example"
 
@@ -157,6 +142,14 @@ async def client_to_agent_messaging(websocket, live_request_queue):
 
 
 
+
+
+# from common import auth
+
+router = APIRouter(
+    prefix="",
+)
+
 ########################## POJO #################################
 # Upload resume endpoint
 class Resume(BaseModel):
@@ -173,40 +166,55 @@ class UserInfo(BaseModel):
     resume: Resume
     job_description: JobDescription
 
-#
-# FastAPI web app
-#
-app = FastAPI()
 
-STATIC_DIR = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
 
-# Socket Connection Manager. It has functions such as connect, disconnect, etc
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+
 manager = ConnectionManager()
 
-@app.get("/")
-async def root():
-    """Serves the index.html"""
-    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
-@app.post("/upload")
-async def upload_resume(request: UserInfo):
-    session_id = request.session_id
-    resume = request.resume,
-    jobDescription = request.job_description
+@router.post("/upload")
+async def upload_material(user_info: UserInfo):
 
-    print(f"Session ID: {session_id}")
-    print(f"Email: {request.resume.email}")
-    print(f"Phone: {request.resume.phone}")
-    print(f"Raw Text: {request.resume.rawText[:100]}...")  # Print first 100 characters
-    print(f"Job Link: {request.job_description.link}")  # Print first 100 characters
-    print(f"Description: {request.job_description.rawText[:100]}...")  # Print first 100 characters
+    print(f"Session ID: {user_info.session_id}")
+    print(f"Email: {user_info.resume.email}")
+    print(f"Phone: {user_info.resume.phone}")
+    print(f"Raw Text: {user_info.resume.rawText[:100]}...")  # Print first 100 characters
+    print(f"Job Link: {user_info.job_description.link}")  # Print first 100 characters
+    print(f"Description: {user_info.job_description.rawText[:100]}...")  # Print first 100 characters
 
     # Placeholder logic to handle the uploaded data
-    return {"status": "success", "session_id": session_id}
+    return {"status": "success", "session_id": user_info.session_id}
 
 
-@app.websocket("/ws/{user_id}")
+@router.post("/")
+async def interview_session(response: str):
+# async def interview_session(response: str, token: str = Depends(auth.validate_token)):
+    """
+    Text mock interview session.
+
+    For agent debug.
+    """
+    pass
+
+
+@router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
     """Client websocket endpoint"""
     
@@ -239,3 +247,4 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
