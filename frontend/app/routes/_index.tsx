@@ -1,7 +1,10 @@
 import type { MetaFunction } from "@remix-run/node";
 import { WebSocketAudio } from "./WebSocketAudio";
-
-
+import { UploadResume } from "./UploadResume";
+import { JobDescriptionInput } from "./JobDescriptionInput";
+import { Button } from "@mui/material";
+import { StartSession } from "./StartSession";
+import { useState } from "react";
 
 export const meta: MetaFunction = () => {
   return [
@@ -11,5 +14,28 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  return <WebSocketAudio />;
+  const [startSession, setStartSession] = useState(false);
+  return (
+    <div className="flex flex-row w-full h-screen bg-gray-100 gap-[200px]">
+      <div className="flex flex-col mx-4  my-4 px-4 pb-20 h-96 w-[600px]">
+        <div className="text-4xl font-bold mt-4 mb-6">Live Interview</div>
+        <div className="text-lg font-bold mt-4 text-gray-500 mb-8">
+          Start Your First Interview
+        </div>
+        <div className="mb-12">
+          <UploadResume />
+        </div>
+        <div className="mb-12">
+          <JobDescriptionInput />
+        </div>
+        <div>
+          <StartSession onStartSession={() => setStartSession(true)} />
+        </div>
+      </div>
+
+      <div className="w-[1000px] mt-[68px]">
+        {startSession && <WebSocketAudio />}
+      </div>
+    </div>
+  );
 }
