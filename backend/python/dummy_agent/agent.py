@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.adk.agents import Agent
+from google.adk.agents import LlmAgent
 
-root_agent = Agent(
+root_agent = LlmAgent(
    # A unique name for the agent.
    name="main_agent",
    # The Large Language Model (LLM) that agent will use.
