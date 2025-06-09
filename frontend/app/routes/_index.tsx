@@ -6,6 +6,7 @@ import { Button } from "@mui/material";
 import { StartSession } from "./StartSession";
 import { useState } from "react";
 import { useReactiveVar } from "@apollo/client";
+import { StartSessionMascot } from "./StartSessionMascot";
 
 export const meta: MetaFunction = () => {
   return [
@@ -19,7 +20,7 @@ export default function Index() {
   const resumeData = useReactiveVar(uploadResumeRawTextDataVar);
   const jobDescriptionInput = useReactiveVar(JobDescriptionVar);
   return (
-    <div className="flex flex-row w-full h-screen bg-gray-100 gap-[200px]">
+    <div className="flex flex-row w-full h-screen bg-gray-100 gap-[50px]">
       <div className="flex flex-col mx-4  my-4 px-4 pb-20 h-96 w-[600px]">
         <div className="text-4xl font-bold mt-4 mb-6">Live Interview</div>
         <div className="text-lg font-bold mt-4 text-gray-500 mb-8">
@@ -39,8 +40,17 @@ export default function Index() {
         </div>
       </div>
 
-      <div className="w-[1000px] mt-[68px]">
-        {startSession && <WebSocketAudio />}
+      <div className="flex mt-[68px]">
+        {startSession && (
+          <div className="text-2xl font-bold text-center mb-4">
+            <StartSessionMascot />
+          </div>
+        )}
+        {startSession && (
+          <div className="w-[1000px] ">
+            <WebSocketAudio />
+          </div>
+        )}
       </div>
     </div>
   );

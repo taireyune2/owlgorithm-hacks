@@ -13,9 +13,6 @@ interface Message {
 
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
-  const [micStatus, setMicStatus] = useState(
-    "Click the icon to start recording"
-  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -82,13 +79,9 @@ export const WebSocketAudio = () => {
           message_from_server.mime_type === "audio/pcm" &&
           audioPlayerNodeRef.current
         ) {
-          setIsSpeaking(true);
-          setTimeout(() => {
-            setIsSpeaking(false);
-          }, 500);
-          audioPlayerNodeRef.current.port.postMessage(
-            base64ToArray(message_from_server.data)
-          );
+          const audioData = base64ToArray(message_from_server.data);
+
+          audioPlayerNodeRef.current.port.postMessage(audioData);
         }
 
         if (message_from_server.mime_type === "text/plain") {
@@ -132,27 +125,10 @@ export const WebSocketAudio = () => {
     });
   };
 
-  const startAudio = async () => {
-    const [playerNode] = await startAudioPlayerWorklet();
-    audioPlayerNodeRef.current = playerNode;
-
-    await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
-      if (websocket && websocket.readyState === WebSocket.OPEN) {
-        const messageJson = JSON.stringify({
-          mime_type: "audio/pcm",
-          data: arrayBufferToBase64(pcmData),
-        });
-        websocket.send(messageJson);
-        console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
-      }
-    });
-  };
-
   const handleStartAudio = async () => {
     if (isRecording) return;
 
     setIsRecording(true);
-    setMicStatus("Recording... Speak now");
 
     try {
       const ws = await connectWebsocket();
@@ -169,7 +145,6 @@ export const WebSocketAudio = () => {
         session_id: sessionIdStarted,
       };
 
-      //TODO - CHANGE URL TO YOUR BACKEND
       await fetch(`http://localhost:8000/upload`, {
         method: "POST",
         headers: {
@@ -178,9 +153,13 @@ export const WebSocketAudio = () => {
         body: JSON.stringify(payload),
       });
 
-      const [playerNode] = await startAudioPlayerWorklet();
+      const [playerNode] = await startAudioPlayerWorklet((speaking) => {
+        setIsSpeaking(speaking);
+        console.log("Audio player speaking state:", speaking);
+      });
       audioPlayerNodeRef.current = playerNode;
 
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
         if (ws.readyState === WebSocket.OPEN) {
           const messageJson = JSON.stringify({
@@ -193,7 +172,7 @@ export const WebSocketAudio = () => {
       });
     } catch (error) {
       console.error(" Failed to start audio session:", error);
-      setMicStatus("Mic/websocket error");
+
       setIsRecording(false);
     }
   };
@@ -201,7 +180,6 @@ export const WebSocketAudio = () => {
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
-      setMicStatus("Click the icon to start recording");
       if (websocket) {
         websocket.close(1000, "Session ended by user");
         setWebsocket(null);
@@ -237,19 +215,20 @@ export const WebSocketAudio = () => {
       </div>
 
       <div className="text-sm font-medium text-gray-600 mb-2">{micStatus}</div>
-
+      <div className="sticky top-20z-10 flex justify-center mb-4">
+        <InterviewerMascot speaking={isSpeaking} />
+      </div>
       <div
         ref={messagesDivRef}
-        className="border border-gray-300 rounded p-2 h-48 overflow-y-auto bg-gray-50 text-sm"
+        className="flex flex-col border border-gray-300 rounded p-2 overflow-y-auto bg-gray-50 text-sm mx-auto h-[400px]"
       >
         <div>
-          <InterviewerMascot speaking={isSpeaking} />
+          {messages.map((msg) => (
+            <p key={msg.id} className="mb-1">
+              {msg.text}
+            </p>
+          ))}
         </div>
-        {messages.map((msg) => (
-          <p key={msg.id} className="mb-1">
-            {msg.text}
-          </p>
-        ))}
       </div>
     </div>
   );

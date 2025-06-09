@@ -7,7 +7,7 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
     super();
 
     // Init buffer
-    this.bufferSize = 24000 * 180;  // 24kHz x 180 seconds
+    this.bufferSize = 24000 * 180; // 24kHz x 180 seconds
     this.buffer = new Float32Array(this.bufferSize);
     this.writeIndex = 0;
     this.readIndex = 0;
@@ -15,7 +15,7 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
     // Handle incoming messages from main thread
     this.port.onmessage = (event) => {
       // Reset the buffer when 'endOfAudio' message received
-      if (event.data.command === 'endOfAudio') {
+      if (event.data.command === "endOfAudio") {
         this.readIndex = this.writeIndex; // Clear the buffer
         console.log("endOfAudio received, clearing the buffer.");
         return;
@@ -49,26 +49,30 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
   // The system calls `process()` ~128 samples at a time (depending on the browser).
   // We fill the output buffers from our ring buffer.
   process(inputs, outputs) {
+    let sum = 0;
     // Write a frame to the output
     const output = outputs[0];
     const framesPerBlock = output[0].length;
     for (let frame = 0; frame < framesPerBlock; frame++) {
+      const sample = this.buffer[this.readIndex] || 0;
       // Write the sample(s) into the output buffer
       output[0][frame] = this.buffer[this.readIndex]; // left channel
-      if (output.length > 1) {
-        output[1][frame] = this.buffer[this.readIndex]; // right channel
+      if (output[1]) {
+        output[1][frame] = sample; // right channel
       }
+      sum += Math.abs(sample);
 
       // Move the read index forward unless underflowing
       if (this.readIndex != this.writeIndex) {
         this.readIndex = (this.readIndex + 1) % this.bufferSize;
       }
     }
+    const avg = sum / framesPerBlock;
+    this.port.postMessage({ speaking: avg > 0.01 });
 
     // Returning true tells the system to keep the processor alive
     return true;
   }
 }
 
-registerProcessor('pcm-player-processor', PCMPlayerProcessor);
-
+registerProcessor("pcm-player-processor", PCMPlayerProcessor);
