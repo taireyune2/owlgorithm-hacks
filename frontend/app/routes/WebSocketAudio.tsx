@@ -13,6 +13,7 @@ interface Message {
 
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
+  const [micStatus, setMicStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -172,7 +173,7 @@ export const WebSocketAudio = () => {
       });
     } catch (error) {
       console.error(" Failed to start audio session:", error);
-
+      setMicStatus("Mic/websocket error");
       setIsRecording(false);
     }
   };
@@ -180,6 +181,7 @@ export const WebSocketAudio = () => {
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
+      setMicStatus("Click the icon to start recording");
       if (websocket) {
         websocket.close(1000, "Session ended by user");
         setWebsocket(null);
