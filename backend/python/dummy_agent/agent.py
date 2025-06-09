@@ -15,13 +15,13 @@
 from google.adk.agents import LlmAgent
 
 root_agent = LlmAgent(
-   # A unique name for the agent.
-   name="main_agent",
-   # The Large Language Model (LLM) that agent will use.
-   model="gemini-2.0-flash-exp",
-   # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
-   # A short description of the agent's purpose.
-   description="Agent to answer questions",
-   # Instructions to set the agent's behavior.
-   instruction="You are a helpful assistant that answers user's questions",
+  # A unique name for the agent.
+  name="main_agent",
+  # The Large Language Model (LLM) that agent will use.
+  model="gemini-2.0-flash-exp",
+  # model="gemini-2.0-flash-live-001",  # New streaming model version as of Feb 2025
+  # A short description of the agent's purpose.
+  description="Agent to answer questions",
+  # Instructions to set the agent's behavior.
+  instruction="You are a helpful assistant that answers user's questions",
 )

@@ -3,7 +3,9 @@ import { ListStartIcon } from "lucide-react";
 
 export const StartSession = ({
   onStartSession,
+  disabled = true,
 }: {
+  disabled: boolean;
   onStartSession: () => void;
 }) => {
   return (
@@ -14,6 +16,7 @@ export const StartSession = ({
       </div>
 
       <Button
+        disabled={disabled}
         color="primary"
         variant="contained"
         className="ml-2"
