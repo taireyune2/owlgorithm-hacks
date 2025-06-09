@@ -20,6 +20,7 @@
     "@remix-run/serve": "^2.16.8",
     "graphql": "^16.11.0",
     "isbot": "^4.1.0",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.513.0",
     "pdfjs-dist": "^2.16.105",
     "react": "^18.2.0",
