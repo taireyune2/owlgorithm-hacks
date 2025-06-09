@@ -4,6 +4,7 @@ import { startAudioRecorderWorklet } from "./audio-recorder";
 import { useReactiveVar } from "@apollo/client";
 import { uploadResumeRawTextDataVar } from "./UploadResume";
 import { JobDescriptionVar } from "./JobDescriptionInput";
+import { InterviewerMascot } from "./InterviewerMascot";
 
 interface Message {
   id: string;
@@ -17,6 +18,7 @@ export const WebSocketAudio = () => {
   );
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const resumeData = useReactiveVar(uploadResumeRawTextDataVar);
   const jobDescriptionInput = useReactiveVar(JobDescriptionVar);
   const messagesDivRef = useRef<HTMLDivElement>(null);
@@ -80,6 +82,10 @@ export const WebSocketAudio = () => {
           message_from_server.mime_type === "audio/pcm" &&
           audioPlayerNodeRef.current
         ) {
+          setIsSpeaking(true);
+          setTimeout(() => {
+            setIsSpeaking(false);
+          }, 500);
           audioPlayerNodeRef.current.port.postMessage(
             base64ToArray(message_from_server.data)
           );
@@ -236,6 +242,9 @@ export const WebSocketAudio = () => {
         ref={messagesDivRef}
         className="border border-gray-300 rounded p-2 h-48 overflow-y-auto bg-gray-50 text-sm"
       >
+        <div>
+          <InterviewerMascot speaking={isSpeaking} />
+        </div>
         {messages.map((msg) => (
           <p key={msg.id} className="mb-1">
             {msg.text}
