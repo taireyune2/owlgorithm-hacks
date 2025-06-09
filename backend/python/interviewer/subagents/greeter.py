@@ -3,12 +3,12 @@ from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
 def next_step(tool_context: ToolContext) -> None:
-    """
-    Progress the conversation to the introduction phase.
-    """
-    if tool_context.state["phase"] == "greeting":
-        tool_context.state["phase"] = "introduction"
-        tool_context.actions.transfer_to_agent = "introducer"
+  """
+  Progress the conversation to the introduction phase.
+  """
+  if tool_context.state["phase"] == "greeting":
+    tool_context.state["phase"] = "introduction"
+    tool_context.actions.transfer_to_agent = "introducer"
 
 next_step_tool = FunctionTool(func=next_step)
 
@@ -22,12 +22,12 @@ If you and the interviewee has already greeted, use the 'next_step_tool' call to
 """
 
 agent = LlmAgent(
-    name="greeter",
-    description="Handles the initial greeting phase of the interview conversation.",
-    model="gemini-2.0-flash",
-    instruction=_instruction,
-    tools=[next_step_tool], 
-    generate_content_config=types.GenerateContentConfig(
-        temperature=2.0
-    ),
+  name="greeter",
+  description="Handles the initial greeting phase of the interview conversation.",
+  model="gemini-2.0-flash",
+  instruction=_instruction,
+  tools=[next_step_tool], 
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0
+  ),
 )
