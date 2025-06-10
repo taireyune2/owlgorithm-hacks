@@ -8,7 +8,7 @@ import json
 import asyncio
 import base64
 import warnings
-
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 from google.genai import types
@@ -20,7 +20,7 @@ from google.genai.types import (
 
 from google.adk.runners import InMemoryRunner
 from google.adk.agents import LiveRequestQueue
-from google.adk.agents.run_config import RunConfig
+from google.adk.agents.run_config import RunConfig, StreamingMode
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +33,9 @@ from dummy_agent.agent import root_agent
 # from .agent import root_agent
 
 APP_NAME = "ADK Streaming example"
-
+VOICE_NAME = "Puck"
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 async def start_agent_session(user_id, is_audio=False):
   """Starts an agent session"""
@@ -53,6 +55,14 @@ async def start_agent_session(user_id, is_audio=False):
   # Set response modality
   modality = "AUDIO" if is_audio else "TEXT"
   run_config = RunConfig(
+    streaming_mode=StreamingMode.BIDI,
+    speech_config=types.SpeechConfig(
+        voice_config=types.VoiceConfig(
+            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                voice_name=VOICE_NAME
+            )
+        )
+    ),
     response_modalities=[modality],
     output_audio_transcription=types.AudioTranscriptionConfig(),
     input_audio_transcription=types.AudioTranscriptionConfig())
@@ -69,16 +79,65 @@ async def start_agent_session(user_id, is_audio=False):
   return live_events, live_request_queue
 
 
-async def agent_to_client_messaging(websocket, live_events):
+async def receive_and_process_responses(websocket, live_events):
   """Agent to client communication"""
 
   # Track user and model outputs between turn completion events
   input_texts = []
   output_texts = []
 
+  # Flag to track if we've seen an interruption in the current turn
+  interrupted = False
+
   while True:
     async for event in live_events:
+      # Read the Content and its first Part
+      part: Part = (
+        event.content and event.content.parts and event.content.parts[0]
+      )
+      if not part:
+        continue
+      
 
+      # If it's audio, send Base64 encoded audio data. Handle audio content
+      if event.content and event.content.parts:
+        for part in event.content.parts:
+          # Process audio content
+
+          is_audio = part.inline_data and part.inline_data.mime_type.startswith("audio/pcm")
+          if hasattr(part, "inline_data") and is_audio:
+            audio_data = part.inline_data and part.inline_data.data
+            if audio_data:
+              message = {
+                "mime_type": "audio/pcm",
+                "data": base64.b64encode(audio_data).decode("ascii")
+              }
+              await websocket.send_text(json.dumps(message))
+              print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+
+          # Process text content
+          if hasattr(part, "text") and part.text:
+            # Check if this is user or model text based on content role
+            if hasattr(event.content, "role") and event.content.role == "user":
+              # User text shouldn't be sent to the client
+              input_texts.append(part.text)
+              print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+            else:
+              # From the logs, we can see the duplicated text issue happens because
+              # we get streaming chunks with "partial=True" followed by a final consolidated
+              # response with "partial=None" containing the complete text
+
+              # Check in the event string for the partial flag
+              # Only process messages with "partial=True"
+              if event.partial:
+                  message = {
+                    "mime_type": "text/plain",
+                    "data": part.text
+                  }
+                  output_texts.append(part.text)
+                  await websocket.send_text(json.dumps(message))
+                  print(f"[AGENT TO CLIENT]: text/plain: {message}")
+       
       # If the turn complete or interrupted, send it
       if event.turn_complete or event.interrupted:
         message = {
@@ -87,38 +146,24 @@ async def agent_to_client_messaging(websocket, live_events):
         }
         await websocket.send_text(json.dumps(message))
         print(f"[AGENT TO CLIENT]: {message}")
+        
+        if input_texts:
+            # Get unique texts to prevent duplication
+            unique_texts = list(dict.fromkeys(input_texts))
+            logger.info(f"Input transcription: {' '.join(unique_texts)}")
+
+        if output_texts:
+            # Get unique texts to prevent duplication
+            unique_texts = list(dict.fromkeys(output_texts))
+            logger.info(f"Output transcription: {' '.join(unique_texts)}")
+
+        input_texts = []
+        output_texts = []
+        interrupted = False
         continue
+      
 
-      # Read the Content and its first Part
-      part: Part = (
-        event.content and event.content.parts and event.content.parts[0]
-      )
-      if not part:
-        continue
-
-      # If it's audio, send Base64 encoded audio data
-      is_audio = part.inline_data and part.inline_data.mime_type.startswith("audio/pcm")
-      if is_audio:
-        audio_data = part.inline_data and part.inline_data.data
-        if audio_data:
-          message = {
-            "mime_type": "audio/pcm",
-            "data": base64.b64encode(audio_data).decode("ascii")
-          }
-          await websocket.send_text(json.dumps(message))
-          print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
-          continue
-
-      # If it's text and a parial text, send it
-      if part.text and event.partial:
-        message = {
-          "mime_type": "text/plain",
-          "data": part.text
-        }
-        await websocket.send_text(json.dumps(message))
-        print(f"[AGENT TO CLIENT]: text/plain: {message}")
-
-async def client_to_agent_messaging(websocket, live_request_queue):
+async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
   """Client to agent communication"""
   while True:
     # Decode JSON message
@@ -131,20 +176,30 @@ async def client_to_agent_messaging(websocket, live_request_queue):
     if mime_type == "text/plain":
       # Send a text message
       content = Content(role="user", parts=[Part.from_text(text=data)])
-      live_request_queue.send_content(content=content)
+      await audio_queue.put(content)
       print(f"[CLIENT TO AGENT]: {data}")
     elif mime_type == "audio/pcm":
       # Send an audio data
       decoded_data = base64.b64decode(data)
-      live_request_queue.send_realtime(Blob(data=decoded_data, mime_type=mime_type))
+      await audio_queue.put(decoded_data)
+      #live_request_queue.send_realtime(Blob(data=decoded_data, mime_type=mime_type))
     else:
       raise ValueError(f"Mime type not supported: {mime_type}")
 
+async def process_and_send_audio(live_request_queue, audio_queue):
+  while True:
+    SEND_SAMPLE_RATE = 16000
+    decoded_data = await audio_queue.get()
 
+    # Send the audio data to Gemini through ADK's LiveRequestQueue
+    live_request_queue.send_realtime(
+        types.Blob(
+            data=decoded_data,
+            mime_type=f"audio/pcm;rate={SEND_SAMPLE_RATE}",
+        )
+    )
+    audio_queue.task_done()
 
-
-
-# from common import auth
 
 router = APIRouter(
   prefix="",
@@ -229,16 +284,21 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
     user_id_str = str(user_id)
     live_events, live_request_queue = await start_agent_session(user_id_str, is_audio == "true")
 
+    audio_queue = asyncio.Queue()
+
     # Start tasks
-    agent_to_client_task = asyncio.create_task(
-      agent_to_client_messaging(websocket, live_events)
+    receive_and_process_responses_task = asyncio.create_task(
+      receive_and_process_responses(websocket, live_events)
     )
     client_to_agent_task = asyncio.create_task(
-      client_to_agent_messaging(websocket, live_request_queue)
+      client_to_agent_messaging(websocket, live_request_queue, audio_queue)
+    )
+    process_and_send_audio_task = asyncio.create_task(
+      process_and_send_audio(live_request_queue, audio_queue)
     )
 
     # Wait until the websocket is disconnected or an error occurs
-    tasks = [agent_to_client_task, client_to_agent_task]
+    tasks = [client_to_agent_task, process_and_send_audio_task, receive_and_process_responses_task]
     await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 
     # Close LiveRequestQueue
