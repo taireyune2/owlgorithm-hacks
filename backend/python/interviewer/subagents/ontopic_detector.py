@@ -44,7 +44,7 @@ Do NOT include any explanations, context, or text outside of this JSON object.
 agent = LlmAgent(
   name="ontopic_detector", 
   description="Detect whether the user response is on-topic.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=instruction,
   # tools=[],
   output_key="on_topic_judgement",

@@ -42,7 +42,7 @@ Do NOT include any explanations, context, or text outside of this JSON object.
 agent = LlmAgent(
   name="question_judge", 
   description="Summarizes the response from user.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=instruction,
   # tools=[],
   output_key="question_judgement", 
