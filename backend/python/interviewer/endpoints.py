@@ -97,10 +97,8 @@ async def receive_and_process_responses(websocket, live_events):
       )
       if not part:
         continue
-      
 
       # If it's audio, send Base64 encoded audio data. Handle audio content
-      
       is_audio = part.inline_data and part.inline_data.mime_type.startswith("audio/pcm")
       if hasattr(part, "inline_data") and is_audio:
         audio_data = part.inline_data and part.inline_data.data
@@ -111,6 +109,7 @@ async def receive_and_process_responses(websocket, live_events):
           }
           await websocket.send_text(json.dumps(message))
           print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+        continue
 
       # Process text content
       if part.text:
@@ -139,7 +138,8 @@ async def receive_and_process_responses(websocket, live_events):
               }
               await websocket.send_text(json.dumps(message))
               print(f"[AGENT TO CLIENT]: text/plain: {message}")
-    
+        continue
+
       # If the turn complete or interrupted, send it
       if event.turn_complete or event.interrupted:
         message = {
@@ -162,7 +162,6 @@ async def receive_and_process_responses(websocket, live_events):
         input_texts = []
         output_texts = []
         interrupted = False
-        continue
       
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
