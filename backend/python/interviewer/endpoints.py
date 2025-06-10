@@ -91,10 +91,45 @@ async def receive_and_process_responses(websocket, live_events):
 
   while True:
     async for event in live_events:
+
+      # Check for interruption
+      if event.interrupted:
+        logger.info("🤐 INTERRUPTION DETECTED")
+        await websocket.send_text(json.dumps({
+          "mime_type": "text/plain",
+          "data": "Response interrupted by user input"
+        }))
+        interrupted =  True
+
+      # Check for turn completion
+      if event.turn_complete:
+        if not interrupted:
+          logger.info("✅ Gemini done talking")
+          message = {
+            "mime_type": "text/plain",
+            "data": "Response done (turn complete) by Gemini"
+          }
+          await websocket.send_text(json.dumps(message))
+
+        if input_texts:
+          # Get unique texts to prevent duplication
+          unique_texts = list(dict.fromkeys(input_texts))
+          logger.info(f"Input transcription: {' '.join(unique_texts)}")
+
+        if output_texts:
+          # Get unique texts to prevent duplication
+          unique_texts = list(dict.fromkeys(output_texts))
+          logger.info(f"Output transcription: {' '.join(unique_texts)}")
+
+        input_texts = []
+        output_texts = []
+        interrupted = False
+
       # Read the Content and its first Part
       part: Part = (
         event.content and event.content.parts and event.content.parts[0]
       )
+
       if not part:
         continue
 
@@ -109,7 +144,6 @@ async def receive_and_process_responses(websocket, live_events):
           }
           await websocket.send_text(json.dumps(message))
           print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
-        continue
 
       # Process text content
       if part.text:
@@ -131,38 +165,13 @@ async def receive_and_process_responses(websocket, live_events):
           # Check in the event string for the partial flag
           # Only process messages with "partial=True"
           if event.partial:
-              output_texts.append(part.text)
-              message = {
-                "mime_type": "text/plain",
-                "data": part.text
-              }
-              await websocket.send_text(json.dumps(message))
-              print(f"[AGENT TO CLIENT]: text/plain: {message}")
-        continue
-
-      # If the turn complete or interrupted, send it
-      if event.turn_complete or event.interrupted:
-        message = {
-          "turn_complete": event.turn_complete,
-          "interrupted": event.interrupted,
-        }
-        await websocket.send_text(json.dumps(message))
-        print(f"[AGENT TO CLIENT]: {message}")
-        
-        if input_texts:
-            # Get unique texts to prevent duplication
-            unique_texts = list(dict.fromkeys(input_texts))
-            logger.info(f"Input transcription: {' '.join(unique_texts)}")
-
-        if output_texts:
-            # Get unique texts to prevent duplication
-            unique_texts = list(dict.fromkeys(output_texts))
-            logger.info(f"Output transcription: {' '.join(unique_texts)}")
-
-        input_texts = []
-        output_texts = []
-        interrupted = False
-      
+            output_texts.append(part.text)
+            message = {
+              "mime_type": "text/plain",
+              "data": part.text
+            }
+            await websocket.send_text(json.dumps(message))
+            print(f"[AGENT TO CLIENT]: text/plain: {message}")
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
   """Client to agent communication"""
