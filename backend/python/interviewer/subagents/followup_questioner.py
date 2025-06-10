@@ -23,7 +23,7 @@ Please ask an appropriate follow-up question based on the response.
 agent = LlmAgent(
   name="followup_questioner", 
   description="Questioner that asks a follow-up question based on the user's response.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=instruction,
   # tools=[],
   output_key="followup_question",  

@@ -9,8 +9,9 @@ def _get_args():
   parser = argparse.ArgumentParser()
 
   parser.add_argument(
-    "--config-dir", required=True, 
-    default="../configs/dev.json",
+    "--config-dir",
+    default=os.getenv("CONFIG_DIR", "../configs/dev.json"),
+    type=str,
     help="Path to config file"
   )
 
