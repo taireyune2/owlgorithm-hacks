@@ -7,6 +7,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 which python
 pip install -r requirements-dev.txt
+
+Windows:
+py -m venv .venv
+.venv\Scripts\activate.bat
+where python
+pip install -r requirements-dev.txt
+
 ```
 
 ## Console Demo
