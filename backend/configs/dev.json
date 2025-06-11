@@ -12,6 +12,7 @@
   }, 
   "api": {
     "root_path": "",
-    "cors": ["*"]
+    "cors": ["*"],
+    "max_connections": 10
   }
 }

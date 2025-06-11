@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
 import uvicorn
+import logging
 
 from pathlib import Path
 from common import configs
@@ -47,4 +48,12 @@ app.include_router(interviewer.endpoints.router)
 
 
 if __name__ == "__main__":
-  uvicorn.run("service:app", host="127.0.0.1", port=8000, reload=True)
+  try:
+    uvicorn.run("service:app", host="127.0.0.1", port=8000, reload=True)
+  except KeyboardInterrupt:
+    logging.info("Exiting application via KeyboardInterrupt...")
+  except Exception as e:
+    logging.error(f"Unhandled exception in main: {e}")
+    import traceback
+    traceback.print_exc()
+  
