@@ -1,9 +1,14 @@
 #!/bin/bash
-image_version="1.0.0"
-image_name="owlspeak/frontend"
-# gcloud init
-# gcloud auth configure-docker us-west1-docker.pkg.dev
-docker tag $image_name:latest us-west1-docker.pkg.dev/owlgorithm-hacks/owl-speak/$image_name:$image_version
-docker push us-west1-docker.pkg.dev/owlgorithm-hacks/owl-speak/$image_name:$image_version
-
+image_name="owlgorithm-hacks-frontend"
+PROJECT_ID=
+Registry_URL=
+repository_name=
+docker tag ${Registry_URL}/${PROJECT_ID}/${repository_name}/${image_name}:latest
+gcloud auth configure-docker us-west1-docker.pkg.dev
+docker buildx build \
+  --platform=linux/amd64,linux/arm64 \
+  -f Dockerfile.prod \
+  -t us-west1-docker.pkg.dev/${PROJECT_ID}/${repository_name}/owlgorithm-hacks-frontend:latest \
+  --push .
+docker push us-west1-docker.pkg.dev/${PROJECT_ID}/${repository_name}/owlgorithm-hacks-frontend:latest
 

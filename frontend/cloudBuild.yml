@@ -1,0 +1,73 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: owlgorithm-hacks-frontend
+  namespace: "397764930512"
+  selfLink: /apis/serving.knative.dev/v1/namespaces/397764930512/services/owlgorithm-hacks-frontend
+  uid: fe775642-9796-4ba0-953f-ae3a2e4d38b6
+  resourceVersion: AAY3aAyAT6U
+  generation: 1
+  creationTimestamp: "2025-06-12T23:10:56.074220Z"
+  labels:
+    cloud.googleapis.com/location: us-west1
+  annotations:
+    run.googleapis.com/client-name: cloud-console
+    serving.knative.dev/creator: celinejangjoo21@gmail.com
+    serving.knative.dev/lastModifier: celinejangjoo21@gmail.com
+    run.googleapis.com/operation-id: 912f612e-006c-4c1f-ac0f-088299a58027
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/urls: '["https://owlgorithm-hacks-frontend-397764930512.us-west1.run.app","https://owlgorithm-hacks-frontend-4eaw2nkl2a-uw.a.run.app"]'
+spec:
+  template:
+    metadata:
+      labels:
+        run.googleapis.com/startupProbeType: Default
+      annotations:
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/client-name: cloud-console
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: 397764930512-compute@developer.gserviceaccount.com
+      containers:
+        - name: owlgorithm-hacks-frontend-1
+          image: us-west1-docker.pkg.dev/gen-lang-client-0956527409/owlgorithm-app/owlgorithm-hacks-frontend
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          startupProbe:
+            timeoutSeconds: 240
+            periodSeconds: 240
+            failureThreshold: 1
+            tcpSocket:
+              port: 8080
+  traffic:
+    - percent: 100
+      latestRevision: true
+status:
+  observedGeneration: 1
+  conditions:
+    - type: Ready
+      status: "True"
+      lastTransitionTime: "2025-06-12T23:11:26.125989Z"
+    - type: ConfigurationsReady
+      status: "True"
+      lastTransitionTime: "2025-06-12T23:11:24.865969Z"
+    - type: RoutesReady
+      status: "True"
+      lastTransitionTime: "2025-06-12T23:11:26.079714Z"
+  latestReadyRevisionName: owlgorithm-hacks-frontend-00001-dgx
+  latestCreatedRevisionName: owlgorithm-hacks-frontend-00001-dgx
+  traffic:
+    - revisionName: owlgorithm-hacks-frontend-00001-dgx
+      percent: 100
+      latestRevision: true
+  url: https://owlgorithm-hacks-frontend-4eaw2nkl2a-uw.a.run.app
+  address:
+    url: https://owlgorithm-hacks-frontend-4eaw2nkl2a-uw.a.run.app
