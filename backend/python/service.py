@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 import os
 import uvicorn
 import logging
+import traceback
 
 from pathlib import Path
 from common import configs
@@ -54,6 +55,5 @@ if __name__ == "__main__":
     logging.info("Exiting application via KeyboardInterrupt...")
   except Exception as e:
     logging.error(f"Unhandled exception in main: {e}")
-    import traceback
     traceback.print_exc()
   

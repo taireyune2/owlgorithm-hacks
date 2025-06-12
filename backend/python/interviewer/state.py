@@ -1,105 +1,103 @@
-from google.adk.sessions import InMemorySessionService, BaseSessionService, Session
-from google.adk.runners import Runner
-from google.genai import types
 import logging
 import json
+import time
+import random
+import asyncio
+
+from fastapi import WebSocket, WebSocketDisconnect
+from google.adk.sessions import InMemorySessionService, BaseSessionService, Session
+from google.adk.runners import InMemoryRunner, Runner
+from google.adk.agents.run_config import RunConfig, StreamingMode
+from google.genai import types
 
 from .agent import root_agent
 
-class InterviewSingleton:
-  def __init__(self, configs: dict):
+
+class InterviewRound:
+  """
+  Represents a single round of the interview.    
+  """
+  user_id: str
+  session_id: str
+  resume: str
+  job_description: str
+  socket: WebSocket
+  latest_signal: float
+
+  def __init__(self, user_id: str, session_id: str):
+    self.user_id = user_id
+    self.session_id = session_id
+
+  def run(self):
     """
+    Start the interview round.
+    """
+    if not self.resume or not self.job_description:
+      logging.error("Interview Round is not ready. Missing resume or job description.")
+      raise ValueError("Interview Round is not ready. Missing resume or job description.")
     
-    """
-    self.session_service: BaseSessionService = InMemorySessionService()
-    self.runner: Runner = Runner(
+    if not self.socket:
+      logging.error("Interview Round is not ready. Missing socket.")
+      raise ValueError("Interview Round is not ready. Missing socket.")
+
+
+class InterviewManager:
+  """
+  Facilitate adding/removing interview rounds
+  and managing their lifecycle.
+  """
+  def __init__(self, config: dict):
+    self.interviews: dict[str, InterviewRound] = {}
+    self.setup_runner: Runner = Runner(
+      app_name=self.config["name"] + "-setup",
       agent=root_agent,
-      app_name=configs["name"],
-      session_service=self.session_service,
+      session_service=InMemorySessionService(),
     )
-    self.configs = configs
+    self.interview_runner: InMemoryRunner = InMemoryRunner(
+      app_name=self.config["name"],
+      agent=root_agent,
+    )
 
-  def initialize_state(self) -> dict:
+  async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3) -> InterviewRound:
     """
-    state schema
-    {
-      "bahavioral_question": "",  # str
-      "user_response": "", # str
-      "followup_question": "", # str
-      "question_judgement": {
-        "is_appropriate": False,
-        "reason": ""  # Optional, str
-      }, 
-      "on_topic_judgement": {
-        "on_topic": False,
-        "reason": ""  # Optional, str
-      },
-    }
+    Check if Interview Round is ready. Once ready, accept websocket connection.
     """
-    return {
-      "behavioral_question": "Describe a situation where you had a conflict with a teammate. How did you handle it?",  
-      "user_response": "",
-      "followup_question": "",
-      "question_judgement": {},
-      "on_topic_judgement": {},
-    }
+    interview = self.interviews.set_default(session_id, InterviewRound())
+    for _ in range(tries):
+      if interview.resume and interview.job_description:
+        interview.socket = websocket
+        interview.latest_signal = time.time()
+        websocket.accept()
+        return interview
+      await asyncio.sleep(0.5)
 
-  async def get_state(self, user_id: str, session_id: str) -> dict:
-    session = await self.get_session(user_id, session_id)
-    return session.state
-  
-  async def get_session(self, user_id: str, session_id: str) -> Session:
-    session =  await self.session_service.get_session(
-      app_name=self.configs["name"],
-      user_id=user_id,
-      session_id=session_id
-    )
-    return session
-  
-  async def create_session(self, user_id: str, session_id: str) -> Session:
-    session = await self.session_service.create_session(
-      app_name=self.configs["name"],
-      user_id=user_id,
-      session_id=session_id,
-      state=self.initialize_state()
-    )
-    return session
-  
-  async def proceed(self, user_id: str, session_id: str, message: str) -> types.Content:
-    # session = await self.get_session(user_id, session_id)
-    # logging.info(
-    #   "pre session state: %s", 
-    #   json.dumps(session.state, indent=2)
-    # )    
-    try:
-      async for event in self.runner.run_async(
-        user_id=user_id,
-        session_id=session_id,
-        new_message=types.Content(
-          role="user",
-          parts=[types.Part(text=message)]
-        )
-      ):
-        session = await self.get_session(user_id, session_id)
-        # if event.is_final_response():
-        #   if event.content and event.content.parts:
-        #     return event.content.parts[0].text
-        ### retrieve user response from state
-        is_appropriate = session.state.get("question_judgement", {}).get("is_appropriate", False)
-        is_ontopic = session.state.get("on_topic_judgement", {}).get("on_topic", False)
-        # logging.info(event)
-        # logging.info(
-        #   "mid session state: %s", 
-        #   json.dumps(session.state, indent=2)
-        # )
-        if is_appropriate and is_ontopic:
-          return types.Content(
-            role="agent", 
-            parts=[types.Part(text=session.state["followup_question"])]
+    self.disconnect(session_id)
+    raise WebSocketDisconnect(f"Interview Round {session_id} is not ready.")
+
+  def disconnect(self, session_id: str):
+    pass
+
+  def cleanup(self, timeout: int = 30):
+    pass
+
+  def get_run_configs(self) -> types.RunConfig:
+    """
+    Generate run configs from presets and dynamic values.
+    """
+    return RunConfig(
+      streaming_mode=StreamingMode.BIDI,
+      speech_config=types.SpeechConfig(
+        voice_config=types.VoiceConfig(
+          prebuilt_voice_config=types.PrebuiltVoiceConfig(
+            voice_name=random.choice(self.config["voice_names"])
           )
+        )
+      ),
+      response_modalities=["AUDIO"],
+      output_audio_transcription=types.AudioTranscriptionConfig(),
+      input_audio_transcription=types.AudioTranscriptionConfig(),
+    )
+  
+  
+  
 
-      return types.Content(role="system", parts=[types.Part(text="Moving on.")])
-
-    except Exception as e:
-      print(f"Error during interview process: {e}")
-      return types.Content(role="system", parts=[types.Part(text="An error occurred during the interview process.")])
