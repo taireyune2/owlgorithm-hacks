@@ -2,8 +2,10 @@ from dotenv import load_dotenv
 import os
 import argparse
 import json
+import random
 
 load_dotenv()
+random.seed(99)
 
 def _get_args():
   parser = argparse.ArgumentParser()

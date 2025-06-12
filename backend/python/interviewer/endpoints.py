@@ -7,13 +7,13 @@ from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import Optional
 
-from . import socket
-
+from . import state, socket
+from common import configs
 
 async def process_audio(websocket: socket.AudioWebSocket):
   pass
 
-manager = socket.AudioConnectionManager()
+manager = state.InterviewManager(config=configs.file["agent"])
 
 ##################### FastAPI endpoints ######################
 class Resume(BaseModel):
@@ -66,13 +66,13 @@ async def interview_session(response: str):
 
 
 @router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int):
+async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
   """Client websocket endpoint"""
-  session_id = str(user_id)
-  await manager.connect(websocket, session_id)
 
+  session_id = str(user_id)
   try:
-    await process_audio(websocket)
+    interview = await manager.connect(websocket, session_id)
+    await interview.run()
   except WebSocketDisconnect:
     pass
   except Exception as e:

@@ -7,12 +7,28 @@
     },
     "console": {}
   },
-  "agent": {
-    "name": "OwlSpeak"
-  }, 
   "api": {
     "root_path": "",
     "cors": ["*"],
     "max_connections": 10
+  },
+  "agent": {
+    "name": "OwlSpeak",
+    "voice_names": [
+      "Kore",
+      "Leda",
+      "Orus",
+      "Charon"
+    ],
+    "default_backgrounds": [
+      {
+        "name": "Alex",
+        "background": "# Alex Wang\n\n**Email: Location:** Menlo Park, CA  \n## \ud83e\udde0 Summary\n\nSenior Software Engineer at Meta with 9+ years of experience in large-scale machine learning infrastructure, currently maintaining and leading development efforts on the PyTorch open-source library. Passionate about creating high-performance, developer-friendly ML tools and fostering open collaboration in the AI community.\n\n---\n\n## \ud83d\udee0 Technical Skills\n\n- **Languages:** Python, C++, CUDA, Bash  \n- **ML Frameworks:** PyTorch, TensorFlow, ONNX  \n- **Tooling:** Git, CMake, Docker, Bazel, Jenkins  \n- **Cloud & Infra:** AWS, Kubernetes, TorchServe  \n- **Operating Systems:** Linux, macOS  \n\n---\n\n## \ud83e\udde9 Professional Experience\n\n### Meta \u2014 *Senior Software Engineer*  \n**Menlo Park, CA** | *Jan 2019 \u2013 Present*  \n**PyTorch Core Team**\n\n- Led the development of major features in PyTorch 2.x, including support for dynamic shapes and better integration with TorchDynamo.\n- Owned the distributed training module (`torch.distributed`), improving multi-GPU training performance by 30% across benchmarks.\n- Reviewed and merged 1,000+ pull requests from contributors across Meta and the open-source community.\n- Drove adoption of PyTorch 2.0 across internal teams, collaborating with product engineers and researchers to onboard over 100 ML workloads.\n- Maintained CI/CD pipelines and release engineering for PyTorch; improved release cadence by 25%.\n\n### Meta \u2014 *Software Engineer*  \n**Seattle, WA** | *Aug 2016 \u2013 Dec 2018*  \n**Applied Machine Learning Infrastructure**\n\n- Designed and implemented internal tools for model training, hyperparameter tuning, and experiment tracking.\n- Contributed to the backend of Meta\u2019s ML experimentation platform, used by over 500 engineers across the company.\n- Worked closely with FAIR (Facebook AI Research) to prototype and deploy new model architectures at scale.\n\n---\n\n## \ud83d\udcda Education\n\n**University of Washington**  \nB.S. in Computer Science, 2012 \u2013 2016  \n- Graduated with Honors  \n- Undergraduate Researcher in Parallel Computing Lab\n\n---\n\n## \ud83c\udfc6 Open Source & Community\n\n- **Maintainer, PyTorch** \u2014 Core contributor since 2019  \n- **Speaker** at NeurIPS, ICML, and PyTorch Developer Day  \n- **Mentor** in Meta\u2019s open-source fellowship program  \n- **Author** of internal best practices on scalable ML training\n\n---\n\n## \ud83e\uddea Projects\n\n**TorchBench** \u2014 Benchmarks suite for PyTorch models  \n**Dynamo Debugger** \u2014 Tooling for PyTorch TorchDynamo introspection and performance profiling  \n**ONNX Exporter Improvements** \u2014 Enhanced operator coverage and model fidelity during PyTorch-to-ONNX conversion\n\n---"
+      },
+      {
+        "name": "Jesse",
+        "background": "# Jesse Smith\n\n## \ud83e\uddd1\u200d\ud83d\udcbc Summary\n\nSeasoned engineering leader with over 12 years of experience in software engineering and technical leadership. Led the Gemini API team at Google, driving the development of high-performance, scalable APIs powering next-generation AI experiences across Google products. Passionate about team growth, developer experience, and building impactful ML platform services.\n\n---\n\n## \ud83d\udee0\ufe0f Skills\n\n- **Languages:** Python, Go, Java, TypeScript  \n- **Cloud & Infrastructure:** GCP, Kubernetes, Spanner, BigQuery, Terraform  \n- **APIs & Platform:** REST, gRPC, OpenAPI, OAuth2, API Gateway  \n- **AI/ML:** Vertex AI, TensorFlow Serving, LangChain  \n- **Leadership:** Cross-org collaboration, hiring, mentoring, OKRs, agile delivery\n\n---\n\n## \ud83c\udfe2 Experience\n\n### **Google \u2013 Engineering Manager, Gemini API Team**  \n*Mountain View, CA | Mar 2020 \u2013 Present*\n\n- Built and led a team of 18 engineers to develop the core APIs for the Gemini LLM platform, serving millions of daily requests.\n- Oversaw architecture for Gemini API access controls, rate limiting, and data governance.\n- Partnered with DeepMind and product teams across Search, Docs, and Android to integrate Gemini APIs into end-user experiences.\n- Spearheaded the redesign of the developer onboarding flow, reducing integration time by 60%.\n- Collaborated with TPMs and product managers to define roadmap and ensure quarterly delivery of key capabilities.\n\n### **Google \u2013 Senior Software Engineer, ML Infrastructure**  \n*Mountain View, CA | Jun 2015 \u2013 Mar 2020*\n\n- Designed scalable systems for training and serving ML models using Kubernetes and custom autoscaling solutions.\n- Developed internal developer tools that improved ML experimentation workflows and reproducibility.\n- Mentored junior engineers and conducted 50+ technical interviews.\n\n### **Dropbox \u2013 Software Engineer**  \n*San Francisco, CA | Jul 2012 \u2013 May 2015*\n\n- Contributed to Dropbox's core sync engine and reliability systems.\n- Led a migration effort from monolithic to microservices architecture.\n- Co-authored internal best practices for service health monitoring and alerting.\n\n---\n\n## \ud83c\udf93 Education\n\n**University of California, Berkeley**  \nB.S. in Electrical Engineering and Computer Sciences  \n*2012*\n\n---\n\n## \ud83c\udfc6 Projects\n\n- **Gemini SDK** \u2013 Led the engineering team that launched SDKs for Python and JavaScript developers to interact with Gemini LLMs.\n- **Model Usage Dashboard** \u2013 Initiated and shipped real-time monitoring tool used internally to track model latency and reliability KPIs.\n\n---\n\n## \ud83c\udf31 Interests\n\n- Scalable AI systems\n- Developer experience tooling\n- Mentorship and engineering career growth"
+      }
+    ]
   }
 }
