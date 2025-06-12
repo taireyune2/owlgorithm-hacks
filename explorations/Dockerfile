@@ -1,4 +1,4 @@
-FROM python:3.13.3
+FROM python:3.12-alpine
 
 # set a working directory to run docker commands
 WORKDIR /app

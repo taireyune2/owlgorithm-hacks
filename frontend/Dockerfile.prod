@@ -8,8 +8,10 @@ COPY package.json package-lock.json ./
 # Install dependencies  
 RUN npm install --silent
 COPY . .
-RUN npm run build --silent  
-FROM node:20 AS production
+RUN npm run build --silent 
+
+
+FROM node:20-alpine AS production
 
 # Set working directory
 WORKDIR /app
