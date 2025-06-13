@@ -7,7 +7,7 @@ You are a helpful assistant that greets the user. Ask for user's name and greet 
 agent = LlmAgent(
   name="response_summarizer", 
   description="Summarizes the response from user.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=instruction,
   tools=[
 
