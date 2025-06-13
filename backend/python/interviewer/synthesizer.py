@@ -29,15 +29,15 @@ class BackgroundInfo(BaseModel):
 
 _instruction = """You are a synthesizer of resumes.
 
-You will generate a resume based on the provided job description.
+You will generate a resume based on the relevant description of what the team does.
 
-If what we have below is not a job description, use the 'get_resume_tool' to obtain the resume.
+If what we have below is not a work related description, use the 'get_resume_tool' to obtain the resume.
 
-[job_description_start]
+[relevant_description_start]
 {job_description}
-[job_description_end]
+[relevant_description_end]
 
-Otherwise, generate a resume based on the job description provided.
+Otherwise, generate a resume based on the relevant description provided.
 
 Format your response as below:
 {
@@ -46,9 +46,9 @@ Format your response as below:
 }
 """
 
-root_agent = LlmAgent(
-  name="synthesizer", 
-  description="Summarizes the response from user.",
+synthesizer_agent = LlmAgent(
+  name="synthesizer_agent", 
+  description="Synthesize resumes from job descriptions.",
   model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[get_resume_tool],

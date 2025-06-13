@@ -38,6 +38,12 @@ async def root():
   return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
+@app.get("/health")
+async def health_check():
+  """Health check endpoint."""
+  return {"status": "ok", "message": "Service is running."}
+
+
 # import analytics.endpoints  
 # app.include_router(analytics.endpoints.router)
 
