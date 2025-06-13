@@ -1,3 +1,6 @@
+from common import configs, logger
+logger.setup(configs.file["logging"])
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +11,6 @@ import logging
 import traceback
 
 from pathlib import Path
-from common import configs
 
 api_configs = configs.file["api"]   
 app = FastAPI(
