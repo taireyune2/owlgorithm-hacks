@@ -10,6 +10,7 @@ There are 2 ways to start the backend. Before you do that, remember to activate 
 ### First way:
 - Follow this link to create a launch.json for VS Code: https://code.visualstudio.com/docs/debugtest/debugging-configuration
 - In the launch.json file, put the following:
+```
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
@@ -26,6 +27,7 @@ There are 2 ways to start the backend. Before you do that, remember to activate 
         }
     ]
 }
+```
 - When you start debugging, it will automatically go to the folder to open the app. "${workspaceFolder}/backend/python/service.py",
 
 ### Second way:
