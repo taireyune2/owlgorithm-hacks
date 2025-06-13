@@ -33,7 +33,7 @@ If the interviewee provided a satisfactory self-introduction, you can proceed to
 agent = LlmAgent(
   name="introducer",
   description="Provide a self-introduction and elicit the interviewee's self-introduction.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[next_step_tool], 
   generate_content_config=types.GenerateContentConfig(
