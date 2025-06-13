@@ -67,6 +67,26 @@ class InterviewerAgent(BaseAgent):
       async for event in self.closer.run_async(ctx):
         yield event
 
+        
+  @override
+  async def _run_live_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+    """
+    Deterministic control flow for other interview agents
+    """
+    if ctx.session.state["phase"] == "greeting":
+      async for event in self.greeter.run_live(ctx):
+        yield event
+    if ctx.session.state["phase"] == "introduction":
+      async for event in self.introducer.run_live(ctx):
+        yield event
+    if ctx.session.state["phase"] == "overview":
+      async for event in self.overviewer.run_live(ctx):
+        yield event
+    if ctx.session.state["phase"] == "behavioral_question":
+      async for event in self.behavioral_questioner.run_live(ctx):
+        yield event
+    if ctx.end_invocation:
+      return
 
 
 root_agent = InterviewerAgent(

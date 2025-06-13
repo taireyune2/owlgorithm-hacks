@@ -22,9 +22,18 @@ the provided response.
 
 ## Run Service
 
+### Modify ADK source code
+
+- Find the file functions.py using control-p (command-p) within the new .venv folder.
+- Search for trace_tool_call on line 288. Comment out the whole function call.
+
+### Run Service
+
 ```
 python service.py --config-dir ../configs/dev.json
 ```
+
+To interact with the application, either go directly to localhost:8000 or follow the frontend README to spinup the react application.
 
 ### pytest
 
