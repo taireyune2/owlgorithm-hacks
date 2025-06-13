@@ -45,7 +45,7 @@ Call the 'get_next_question_tool' to get the next question to ask the interviewe
 agent = LlmAgent(
   name="behavioral_questioner",
   description="Ask the interviewee behavioral questions.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[get_next_question_tool], 
   generate_content_config=types.GenerateContentConfig(

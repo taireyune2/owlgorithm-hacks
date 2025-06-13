@@ -26,7 +26,7 @@ Otherwise, if the interviewee asks to clarify, please reply with a rephrase of t
 agent = LlmAgent(
   name="overviewer",
   description="Provide an overview of the interview process and set expectations.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[next_step_tool], 
   generate_content_config=types.GenerateContentConfig(
