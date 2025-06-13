@@ -43,14 +43,7 @@ async def upload_material(request: UserInfo):
   """
   Endpoint to upload user resume and job description.
   """
-  # Here you can process the uploaded data, e.g., save it to a database or file system
-  print(f"Received session_id: {request.session_id}")
-  print(f"Received email: {request.resume.email}")
-  print(f"Received phone: {request.resume.phone}")
-  print(f"Received rawText: {request.resume.rawText}")
-  print(f"Received job description link: {request.job_description.link}")
-  print(f"Received job description rawText: {request.job_description.rawText}")
-
+  manager.add_info(request.session_id, request.resume.rawText, request.job_description.rawText)
   return {"status": "success", "message": "Materials uploaded successfully."}
 
 
@@ -72,7 +65,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
   session_id = str(user_id)
   try:
     interview = await manager.connect(websocket, session_id)
-    await interview.run()
+    await interview.start_session()
   except WebSocketDisconnect:
     pass
   except Exception as e:

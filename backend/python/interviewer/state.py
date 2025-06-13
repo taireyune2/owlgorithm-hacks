@@ -11,7 +11,7 @@ from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
 
 from .agent import root_agent
-
+from .synthesizer import agent, BackgroundInfo
 
 class InterviewRound:
   """
@@ -24,11 +24,23 @@ class InterviewRound:
   socket: WebSocket
   latest_signal: float
 
-  def __init__(self, user_id: str, session_id: str):
-    self.user_id = user_id
-    self.session_id = session_id
+  run_config: RunConfig
+  session_service: InMemorySessionService
+  configs: dict
 
-  def run(self):
+  def __init__(
+    self, 
+    session_id: str, 
+    session_service: InMemorySessionService, 
+    run_config: RunConfig, 
+    configs: dict,
+  ):
+    self.session_id = session_id
+    self.run_config = run_config
+    self.session_service: InMemorySessionService = session_service
+    self.configs = configs
+
+  async def start_session(self):
     """
     Start the interview round.
     """
@@ -39,6 +51,43 @@ class InterviewRound:
     if not self.socket:
       logging.error("Interview Round is not ready. Missing socket.")
       raise ValueError("Interview Round is not ready. Missing socket.")
+    
+  async def prep_background(self, resume: str, job_description: str) -> BackgroundInfo:
+    """
+    Run Synthesizer agent to prepare background information.
+    """
+    self.resume = resume
+    self.job_description = job_description
+
+    runner: Runner = Runner(
+      app_name=self.config["name"] + "-setup",
+      agent=root_agent,
+      session_service=self.session_service
+    )
+    session = await self.session_service.create_session(
+      app_name=self.config["name"] + "-setup",
+      user_id=self.session_id,
+      session_id=self.session_id,
+      state={"job_description": job_description}
+    )
+
+    async for event in runner.run_async(
+      user_id=self.session_id,
+      session_id=self.session_id,
+      new_message=types.Content(
+        role="user",
+        parts=[types.Part(text="")]
+      )
+    ):
+      if event.is_final_response():
+        event_content = event.content
+
+        logging.info(f"Background preparation completed for session {self.session_id}.")
+        
+
+
+    
+    
 
 
 class InterviewManager:
@@ -48,21 +97,28 @@ class InterviewManager:
   """
   def __init__(self, config: dict):
     self.interviews: dict[str, InterviewRound] = {}
-    self.setup_runner: Runner = Runner(
-      app_name=self.config["name"] + "-setup",
-      agent=root_agent,
-      session_service=InMemorySessionService(),
-    )
+    self.config = config
+    self.session_service = InMemorySessionService()
+
     self.interview_runner: InMemoryRunner = InMemoryRunner(
       app_name=self.config["name"],
       agent=root_agent,
     )
 
+  def add_info(self, session_id: str, resume: str, job_description: str):
+    """
+    Add resume and job description to the interview round.
+    """
+    interview = self.interviews.set_default(session_id, InterviewRound(session_id, session_id))
+    interview.resume = resume
+    interview.job_description = job_description
+    logging.info(f"Added info for session {session_id}: resume and job description.")
+
   async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3) -> InterviewRound:
     """
     Check if Interview Round is ready. Once ready, accept websocket connection.
     """
-    interview = self.interviews.set_default(session_id, InterviewRound())
+    interview = self.interviews.set_default(session_id, InterviewRound(session_id, session_id))
     for _ in range(tries):
       if interview.resume and interview.job_description:
         interview.socket = websocket
