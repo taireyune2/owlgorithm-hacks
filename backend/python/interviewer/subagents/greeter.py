@@ -24,7 +24,7 @@ If you and the interviewee has already greeted, use the 'next_step_tool' call to
 agent = LlmAgent(
   name="greeter",
   description="Handles the initial greeting phase of the interview conversation.",
-  model="gemini-2.0-flash",
+  model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[next_step_tool], 
   generate_content_config=types.GenerateContentConfig(
