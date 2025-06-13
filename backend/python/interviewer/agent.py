@@ -85,6 +85,9 @@ class InterviewerAgent(BaseAgent):
     if ctx.session.state["phase"] == "behavioral_question":
       async for event in self.behavioral_questioner.run_live(ctx):
         yield event
+    if ctx.session.state["phase"] == "closing":
+      async for event in self.closer.run_async(ctx):
+        yield event
     if ctx.end_invocation:
       return
 
