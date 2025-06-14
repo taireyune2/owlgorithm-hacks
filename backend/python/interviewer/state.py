@@ -81,10 +81,28 @@ class InterviewRound:
     return results[-1] 
 
         
-  async def start_session(self):
+  async def start_session(self, interviewer_background: str):
     """
     Start the interview round.
     """
+    runner = InMemoryRunner(
+      app_name=self.configs["name"],
+      agent=root_agent,
+    )
+
+    # Create a Session
+    session = await runner.session_service.create_session(
+      app_name=self.configs["name"],
+      user_id=self.session_id,  # Replace with actual user ID
+      state={
+        # "interviewer_name": "Alex",
+        "interviewer_background": interviewer_background,
+        # "interviewee_name": "Mike",
+        "resume": self.resume,
+        "job_description": self.job_description,
+        "phase": "greeting"
+      }
+    )  
 
   def run_session(self):
     pass
