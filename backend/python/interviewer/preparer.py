@@ -16,9 +16,7 @@ class ResumeJudgement(BaseModel):
 _instruction = """You are a resume judge. 
 
 Determine if the input text is a resume or not. 
-
 If it is a resume, return true, otherwise return false with explanation.
-
 Here is the input text:
 
 [start_input]
@@ -55,9 +53,7 @@ class JobDescriptionJudgement(BaseModel):
 _instruction = """You are a job description judge.
 
 Determine if the input text is a job description or not.
-
 If it is a job description, return true, otherwise return false with explanation.
-
 Here is the input text:
 
 [start_input]
@@ -87,31 +83,30 @@ job_description_judge = LlmAgent(
 
 
 ######################### Interviewer Self Introduction ###############################
-
 def check_inputs_callback(callback_context: CallbackContext) -> Optional[types.Content]:
   """
   Callback to check if the inputs are valid resumes and job descriptions.
   """
+  logging.info("callback called")
   resume_judgement = callback_context.state.get("resume_judgement")
   job_description_judgement = callback_context.state.get("job_description_judgement")
-  print(f"Resume judgement: {resume_judgement}")
-  print(f"Job description judgement: {job_description_judgement}")
+  # print(f"Resume judgement: {resume_judgement}")
+  # print(f"Job description judgement: {job_description_judgement}")
   if resume_judgement.get("is_resume", False) and job_description_judgement.get("is_job_description", False):
     return None
   
-  error_message = "Invalid inputs: "
-  if not resume_judgement.get("is_resume", False):
-    error_message += f"Resume check failed: {resume_judgement.get("explanation", "")}. "
-  if not job_description_judgement.get("is_job_description", False):
-    error_message += f"Job description check failed: {job_description_judgement.get("explanation", "")}."
-  logging.info(f"User uploaded invalid background info: {error_message}")
-  return types.Content(role="agent", parts=[types.Part(text=error_message)])
+  # error_message = "Invalid inputs: "
+  # if not resume_judgement.get("is_resume", False):
+  #   error_message += f"Resume check failed: {resume_judgement.get("explanation", "")}. "
+  # if not job_description_judgement.get("is_job_description", False):
+  #   error_message += f"Job description check failed: {job_description_judgement.get("explanation", "")}."
+  # logging.info(f"User uploaded invalid background info: {error_message}")
+  # return types.Content(role="agent", parts=[types.Part(text=error_message)])
 
 
 _instruction = """You are a person who is hiring.
 
 You need to give a background about yourself to the candidate.
-
 This is the job description you wrote:
 
 {job_description}

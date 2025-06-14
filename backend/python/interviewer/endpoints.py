@@ -3,7 +3,7 @@ import asyncio
 import json
 import logging
 import traceback
-from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
@@ -42,9 +42,17 @@ router = APIRouter(
 async def upload_material(request: UserInfo):
   """
   Endpoint to upload user resume and job description.
+  If the materials are valid, the interview session will start.
+  If the materials are invalid, the invalid reason will be returned in the error details.
   """
-  manager.add_info(request.session_id, request.resume.rawText, request.job_description.rawText)
-  return {"status": "success", "message": "Materials uploaded successfully."}
+  try:
+    await manager.prep_background(request.session_id, request.resume.rawText, request.job_description.rawText)
+    return {"status": "success", "message": "Materials uploaded successfully."}
+  except ValueError as e:
+    raise HTTPException(status_code=400, detail=str(e))
+  except Exception as e:
+    logging.error(f"Error uploading materials: {e}")
+    raise HTTPException(status_code=500, detail="Internal server error while uploading materials.")
 
 
 @router.post("/")
