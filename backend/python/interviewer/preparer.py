@@ -104,7 +104,7 @@ def check_inputs_callback(callback_context: CallbackContext) -> Optional[types.C
   # return types.Content(role="agent", parts=[types.Part(text=error_message)])
 
 
-_instruction = """You are a person who is hiring.
+_instruction = """You are a person who is hiring. Your name is {interviewer_name}.
 
 You need to give a background about yourself to the candidate.
 This is the job description you wrote:
