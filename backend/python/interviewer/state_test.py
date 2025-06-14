@@ -1,7 +1,19 @@
 import pytest 
+from dotenv import load_dotenv
+
+from common import logger
+logger.setup({
+  "level": 20,
+  "env": "dev",
+  "file": {
+    "path": "../logs"
+  },
+  "console": {}
+})
+load_dotenv()
+
 import logging
 import json
-from dotenv import load_dotenv
 from google.adk.sessions import InMemorySessionService
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
@@ -9,11 +21,11 @@ import random
 import os
 
 from . import state
-from common import logger
+
 from .state import InterviewRound
 
+
 async def test_interview_prep_background():
-  load_dotenv()
   session_service = InMemorySessionService()
   run_config = RunConfig(
     streaming_mode=StreamingMode.BIDI,
@@ -37,4 +49,5 @@ async def test_interview_prep_background():
   
   interview_round = InterviewRound("123", session_service, run_config, agent_configs)
   background_info = await interview_round.prep_background(resume, job_description)
-  print(f"Background info: {background_info}")
+
+  logging.info(f"Background info: {background_info}")

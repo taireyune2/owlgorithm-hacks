@@ -18,8 +18,6 @@ class InterviewRound:
   """
   Represents a single round of the interview.    
   """
-  manager: InterviewManager
-  user_id: str
   session_id: str
   resume: str
   job_description: str
@@ -41,18 +39,6 @@ class InterviewRound:
     self.run_config = run_config
     self.session_service: InMemorySessionService = session_service
     self.configs = configs
-
-  async def start_session(self):
-    """
-    Start the interview round.
-    """
-    if not self.resume or not self.job_description:
-      logging.error("Interview Round is not ready. Missing resume or job description.")
-      raise ValueError("Interview Round is not ready. Missing resume or job description.")
-    
-    if not self.socket:
-      logging.error("Interview Round is not ready. Missing socket.")
-      raise ValueError("Interview Round is not ready. Missing socket.")
     
   async def prep_background(self, resume: str, job_description: str) -> str:
     """
@@ -76,6 +62,7 @@ class InterviewRound:
       }
     )
 
+    results = []
     async for event in runner.run_async(
       user_id=self.session_id,
       session_id=self.session_id,
@@ -85,8 +72,20 @@ class InterviewRound:
       )
     ):
       if event.is_final_response():
-        return event.content.parts[0].text
+        results.append(event.content.parts[0].text)
+
+    if not results:
+      raise Exception("Agents failed to generate a proper response.")
+    if results[-1].startswith("Invalid inputs: "):
+      raise ValueError(results[-1])
+    return results[-1] 
+
         
+  async def start_session(self):
+    """
+    Start the interview round.
+    """
+
   def run_session(self):
     pass
 
@@ -106,29 +105,27 @@ class InterviewManager:
       agent=root_agent,
     )
 
-  def add_info(self, session_id: str, resume: str, job_description: str):
+  async def prep_background(self, session_id: str, resume: str, job_description: str):
     """
     Add resume and job description to the interview round.
     """
-    interview = self.interviews.set_default(session_id, InterviewRound(session_id, session_id))
-    interview.resume = resume
-    interview.job_description = job_description
-    logging.info(f"Added info for session {session_id}: resume and job description.")
+    if session_id in self.interviews:
+      logging.warning(f"Session {session_id} already exists. Overwriting existing interview round.")
+      self.disconnect(session_id)
+    
+    interview = InterviewRound(
+      session_id=session_id,
+      session_service=self.session_service,
+      run_config=self.get_run_configs(),
+      configs=self.config
+    )
+    return await interview.prep_background(resume, job_description)
 
   async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3) -> InterviewRound:
     """
     Check if Interview Round is ready. Once ready, accept websocket connection.
     """
-    interview = self.interviews.set_default(session_id, InterviewRound(session_id, session_id))
-    for _ in range(tries):
-      if interview.resume and interview.job_description:
-        interview.socket = websocket
-        interview.latest_signal = time.time()
-        websocket.accept()
-        return interview
-      await asyncio.sleep(0.5)
 
-    self.disconnect(session_id)
     raise WebSocketDisconnect(f"Interview Round {session_id} is not ready.")
 
   def disconnect(self, session_id: str):
