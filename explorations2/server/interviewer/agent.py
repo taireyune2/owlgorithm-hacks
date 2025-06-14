@@ -10,7 +10,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.events import Event
 from google.genai import types
 
-from .subagents import  behavioral_questioner, greeter, introducer, overviewer, closing_agent
+from .subagents import  behavioral_questioner, greeter, introducer, overviewer
 
 
 class InterviewerAgent(BaseAgent):
@@ -24,7 +24,6 @@ class InterviewerAgent(BaseAgent):
   greeter: LlmAgent
   overviewer: LlmAgent
   behavioral_questioner: LlmAgent
-  closer: LlmAgent
 
   def __init__(
     self, 
@@ -32,7 +31,6 @@ class InterviewerAgent(BaseAgent):
     introducer: LlmAgent,
     overviewer: LlmAgent,
     behavioral_questioner: LlmAgent,
-    closer: LlmAgent,
     name: str = "interviewer",
   ):
     super().__init__(
@@ -40,9 +38,8 @@ class InterviewerAgent(BaseAgent):
       introducer=introducer,
       overviewer=overviewer,
       behavioral_questioner=behavioral_questioner,
-      closer=closer,
       name=name,
-      sub_agents=[greeter, introducer, overviewer, behavioral_questioner, closer],
+      sub_agents=[greeter, introducer, overviewer, behavioral_questioner  ],
       description="Route agents based on the interview phase.",
     )
 
@@ -63,10 +60,6 @@ class InterviewerAgent(BaseAgent):
     if ctx.session.state["phase"] == "behavioral_question":
       async for event in self.behavioral_questioner.run_async(ctx):
         yield event
-    if ctx.session.state["phase"] == "closing":
-      async for event in self.closer.run_async(ctx):
-        yield event
-
         
   @override
   async def _run_live_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -85,9 +78,6 @@ class InterviewerAgent(BaseAgent):
     if ctx.session.state["phase"] == "behavioral_question":
       async for event in self.behavioral_questioner.run_live(ctx):
         yield event
-    if ctx.session.state["phase"] == "closing":
-      async for event in self.closer.run_async(ctx):
-        yield event
     if ctx.end_invocation:
       return
 
@@ -97,6 +87,5 @@ root_agent = InterviewerAgent(
   introducer.agent,
   overviewer.agent,
   behavioral_questioner.agent,
-  closing_agent.agent,
   name="root_agent"
 )

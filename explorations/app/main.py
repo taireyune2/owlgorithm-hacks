@@ -191,7 +191,8 @@ async def root():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # ✅ allow Vite dev server
+    allow_origins=["http://localhost:5173", 
+                        "http://localhost:3000" ],  # for Remix in Docker  ],  # ✅ allow Vite dev server
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
