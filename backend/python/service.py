@@ -58,7 +58,7 @@ app.include_router(interviewer.endpoints.router)
 
 if __name__ == "__main__":
   try:
-    uvicorn.run("service:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("service:app", host="localhost", port=8000, reload=True)
   except KeyboardInterrupt:
     logging.info("Exiting application via KeyboardInterrupt...")
   except Exception as e:
