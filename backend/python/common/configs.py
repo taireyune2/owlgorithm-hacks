@@ -7,20 +7,20 @@ import random
 load_dotenv()
 random.seed(99)
 
-def _get_args():
-  parser = argparse.ArgumentParser()
+# def _get_args():
+#   parser = argparse.ArgumentParser()
 
-  parser.add_argument(
-    "--config-dir",
-    default=os.getenv("CONFIG_DIR", "../configs/dev.json"),
-    type=str,
-    help="Path to config file"
-  )
+#   parser.add_argument(
+#     "--config-dir",
+#     default=os.getenv("CONFIG_DIR", "../configs/dev.json"),
+#     type=str,
+#     help="Path to config file"
+#   )
 
-  args = parser.parse_args()
-  return args
+#   args = parser.parse_args()
+#   return args
 
-_args = _get_args()
+# _args = _get_args()
 
-with open(_args.config_dir, "r") as f:
+with open(os.getenv("CONFIG_DIR", "../configs/dev.json"), "r") as f:
   file: dict = json.load(f)

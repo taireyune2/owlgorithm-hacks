@@ -3,22 +3,16 @@ FROM node:lts-bullseye
 ### set working directory
 WORKDIR /app
 
+# Copy package files
+COPY package.json package-lock.json* yarn.lock* ./  
+RUN npm install --silent
+
 ### copy source code
 COPY public ./public
 # COPY node_modules ./node_modules
-COPY src ./src
+COPY app ./app
+COPY tsconfig.json pdfjs.d.ts postcss.config.js tailwind.config.ts tsconfig.json tsconfig.tsbuildinfo vite.config.ts ./
 
-### add `/app/node_modules/.bin` to $PATH
-ENV PATH /app/node_modules/.bin:$PATH
-
-### install app dependencies
-COPY package.json ./
-COPY package-lock.json ./
-COPY tsconfig.json ./
-COPY .env.development ./
-
-RUN npm install
-# RUN npm install --silent
-
-CMD ["npm", "start"]
+EXPOSE 3000
+# CMD ["npm", "run", "dev"]
 # CMD ["/bin/bash"]

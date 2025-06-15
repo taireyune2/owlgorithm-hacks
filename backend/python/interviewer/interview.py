@@ -225,7 +225,7 @@ class InterviewManager:
     choice = random.choice(self.config["voices"]) 
     interviewer = Interviewer(
       self.config["name"], 
-      choice["interviewer_name"], 
+      choice["name"], 
       choice["voice"], 
       self.session_service
     )

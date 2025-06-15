@@ -7,8 +7,10 @@ RUN pip install -r requirements.txt
 RUN rm /home/service/requirements.txt
 
 ### copy source code
-COPY src/ /home/service/src
-COPY service.py /home/service/service.py
+COPY python/ /home/service/python
+COPY python/.container /home/service/python/.env
+COPY configs/containerized.json /home/service/configs/.
+WORKDIR /home/service/python
 
 ### run
 CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8000"]
