@@ -7,10 +7,13 @@ import logging
 import json
 import base64
 
+from fastapi import WebSocket, WebSocketDisconnect
 from google.genai import types
+from google.adk.events import Event
+from typing import Optional, AsyncGenerator
 
 
-async def receive_and_process_responses(websocket, live_events):
+async def receive_and_process_responses(websocket: WebSocket, live_events: AsyncGenerator[Event, None]):
   """Agent to client communication"""
   
   # Track user and model outputs between turn completion events
@@ -74,7 +77,7 @@ async def receive_and_process_responses(websocket, live_events):
             "data": base64.b64encode(audio_data).decode("ascii")
           }
           await websocket.send_text(json.dumps(message))
-          print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+          # print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
 
       # Process text content
       if part.text:
@@ -87,7 +90,7 @@ async def receive_and_process_responses(websocket, live_events):
             "data": part.text
           }
           await websocket.send_text(json.dumps(message))
-          print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+          # print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
         else:
           # From the logs, we can see the duplicated text issue happens because
           # we get streaming chunks with "partial=True" followed by a final consolidated
@@ -102,7 +105,8 @@ async def receive_and_process_responses(websocket, live_events):
               "data": part.text
             }
             await websocket.send_text(json.dumps(message))
-            print(f"[AGENT TO CLIENT]: text/plain: {message}")
+            # print(f"[AGENT TO CLIENT]: text/plain: {message}")
+      
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
   """Client to agent communication"""
@@ -118,7 +122,7 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
       # Send a text message
       content = types.Content(role="user", parts=[types.Part.from_text(text=data)])
       await audio_queue.put(content)
-      print(f"[CLIENT TO AGENT]: {data}")
+      # print(f"[CLIENT TO AGENT]: {data}")
     elif mime_type == "audio/pcm":
       # Send an audio data
       decoded_data = base64.b64decode(data)

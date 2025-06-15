@@ -29,15 +29,14 @@ app.add_middleware(
   allow_headers=["*"],  # Allow all headers or specify ["Content-Type", "Authorization"]
 )
 
+if api_configs["dev"]:
+  STATIC_DIR = Path(__file__).parent / "static"
+  app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-STATIC_DIR = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-
-@app.get("/")
-async def root():
-  """Serves the index.html"""
-  return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+  @app.get("/")
+  async def root():
+    """Serves the index.html"""
+    return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
 
 @app.get("/health")

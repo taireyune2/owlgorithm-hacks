@@ -113,7 +113,8 @@ This is the job description you wrote:
 
 Please give a brief background of yourself. 
 This description should be clear and concise, befitting the PERSON WHO IS HIRING.
-The description should be no more than 200 words. Please use fictional information where ever needed.
+The description should be no more than 100 words. Please use fictional information where ever needed.
+Respond only with your background. No need to greet.
 """
 
 interviewer_agent = LlmAgent(

@@ -103,9 +103,11 @@ class InterviewRound:
   session_id: str
   socket: WebSocket
   latest_signal: float
+  session: Session
   live_events: AsyncGenerator[Event, None]
   live_request_queue: LiveRequestQueue
   audio_queue: asyncio.Queue
+
   
   def __init__(
     self, 
@@ -118,7 +120,7 @@ class InterviewRound:
     self.interviewer = interviewer
     self.audio_queue = asyncio.Queue()
 
-  async def initialize_agent(self, resume: str, job_description: str):
+  async def initialize_agent(self, resume: str, job_description: str) -> tuple[AsyncGenerator[Event, None], LiveRequestQueue]:
     """
     Start the interview round.
     """
@@ -129,7 +131,7 @@ class InterviewRound:
       )
 
       # Create a Session
-      session = await runner.session_service.create_session(
+      self.session = await runner.session_service.create_session(
         app_name=self.app_name,
         user_id=self.session_id,  # Replace with actual user ID
         state={
@@ -143,13 +145,15 @@ class InterviewRound:
       )
       self.live_request_queue = LiveRequestQueue()
       self.live_events = runner.run_live(
-        session=session,
+        session=self.session,
         live_request_queue=self.live_request_queue,
         run_config=self.interviewer.get_run_configs()
       )
+      logging.info(f"Interview round {self.session_id} initialized with interviewer {self.interviewer.name}.")
     except Exception as e:
       logging.error(f"Unhandled error in client_to_agent_messaging: {e}")
       logging.error(traceback.format_exc())
+      raise e
 
   def is_ready(self) -> bool:
     """
@@ -157,6 +161,16 @@ class InterviewRound:
     """
     return self.live_events is not None
   
+  async def broadcast_state(self, websocket: WebSocket) -> None:
+    while True:
+      message = {
+        "mime_type": "text",
+        "data": self.session.state["phase"]
+      }
+      logging.info(f"Broadcasting state: {message['data']}")
+      await websocket.send_text(json.dumps(message))
+      await asyncio.sleep(5)
+
   async def run(self, websocket: WebSocket) -> None:
     """
     Run the interview round with the given WebSocket connection.
@@ -176,8 +190,16 @@ class InterviewRound:
       socket.process_and_send_audio(self.live_request_queue, self.audio_queue)
     )
 
+    broadcast_state_task = asyncio.create_task(
+      self.broadcast_state(websocket)
+    )
     # Wait until the websocket is disconnected or an error occurs
-    tasks = [client_to_agent_task, process_and_send_audio_task, receive_and_process_responses_task]
+    tasks = [
+      client_to_agent_task, 
+      process_and_send_audio_task, 
+      receive_and_process_responses_task,
+      broadcast_state_task,
+    ]
     await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 
     for task in tasks:
@@ -236,35 +258,29 @@ class InterviewManager:
       session_id=session_id,
       interviewer=interviewer
     )
-    interview_round.initialize_agent(resume, job_description)
     self.interviews[session_id] = interview_round
-    
+    await interview_round.initialize_agent(resume, job_description)
+
   async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3):
     """
     Check if Interview Round is ready. Once ready, accept websocket connection.
     """
-    if session_id not in self.interviews:
-      logging.error(f"Session {session_id} not found. Cannot connect to interview round.")
-      raise WebSocketDisconnect(f"Session {session_id} not found.")
-    
     interview_round = self.interviews.get(session_id, None)
-    if interview_round.is_ready():
-      return await interview_round.run(websocket)
-
-    if tries > 0:
-      await asyncio.sleep(1)
-      return await self.connect(websocket, session_id, tries - 1)
-    else:
-      self._disconnect(interview_round)
-      raise WebSocketDisconnect(f"Interview Round {session_id} is not ready.")
-
-  def _disconnect(self, interview_round: InterviewRound):
-    interview_round.close()
-    del self.interviews[interview_round.session_id]
+    if not interview_round or not interview_round.is_ready():
+      if tries > 0:
+        logging.info(f"Interview Round {session_id} is not ready. Retrying in 1 second with {tries} retries...")
+        await asyncio.sleep(1)
+        return await self.connect(websocket, session_id, tries - 1)
+      else:
+        logging.error(f"Interview Round {session_id} is not ready after retries. Disconnecting.")
+        self.disconnect(session_id)
+        raise WebSocketDisconnect(f"Interview Round {session_id} is not ready after retries.")
+    
+    return await interview_round.run(websocket)
 
   def disconnect(self, session_id: str):
-    if session_id in self.interviews:
-      self._disconnect(self.interviews[session_id])
-  
-  
+    interview_round = self.interviews.get(session_id, None)
+    if interview_round:
+      interview_round.close()
+      del self.interviews[interview_round.session_id]
 
