@@ -64,11 +64,9 @@ async def interview_session(response: str):
   pass
 
 
-@router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
+@router.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
   """Client websocket endpoint"""
-
-  session_id = str(user_id)
   try:
     await manager.connect(websocket, session_id)
   except WebSocketDisconnect:

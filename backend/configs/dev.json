@@ -10,7 +10,8 @@
   "api": {
     "root_path": "",
     "cors": ["*"],
-    "max_connections": 10
+    "max_connections": 10,
+    "dev": true
   },
   "agent": {
     "name": "OwlSpeak",
