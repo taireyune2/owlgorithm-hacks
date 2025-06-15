@@ -110,6 +110,7 @@ async def receive_and_process_responses(websocket, live_events):
       if event.interrupted:
         logger.info("🤐 INTERRUPTION DETECTED")
         await websocket.send_text(json.dumps({
+          "status": "interrupted",
           "mime_type": "text/plain",
           "data": "Response interrupted by user input"
         }))
@@ -119,11 +120,11 @@ async def receive_and_process_responses(websocket, live_events):
       if event.turn_complete:
         if not interrupted:
           logger.info("✅ Gemini done talking")
-          message = {
+          await websocket.send_text(json.dumps({
+            "status": "turn_complete",
             "mime_type": "text/plain",
-            "data": "Response done (turn complete) by Gemini"
-          }
-          await websocket.send_text(json.dumps(message))
+            "data": "Response completed by Gemini"
+          }))
 
         if input_texts:
           # Get unique texts to prevent duplication
@@ -153,6 +154,7 @@ async def receive_and_process_responses(websocket, live_events):
         audio_data = part.inline_data and part.inline_data.data
         if audio_data:
           message = {
+            "status": "open",
             "mime_type": "audio/pcm",
             "data": base64.b64encode(audio_data).decode("ascii")
           }
@@ -166,6 +168,7 @@ async def receive_and_process_responses(websocket, live_events):
           # User text shouldn't be sent to the client
           input_texts.append(part.text)
           message = {
+            "status": "open",
             "mime_type": "text/plain",
             "data": part.text
           }
@@ -181,6 +184,7 @@ async def receive_and_process_responses(websocket, live_events):
           if event.partial:
             output_texts.append(part.text)
             message = {
+              "status": "open",
               "mime_type": "text/plain",
               "data": part.text
             }
@@ -189,26 +193,47 @@ async def receive_and_process_responses(websocket, live_events):
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
   """Client to agent communication"""
-  while True:
-    # Decode JSON message
-    message_json = await websocket.receive_text()
-    message = json.loads(message_json)
-    mime_type = message["mime_type"]
-    data = message["data"]
-
-    # Send the message to the agent
-    if mime_type == "text/plain":
-      # Send a text message
-      content = Content(role="user", parts=[Part.from_text(text=data)])
-      await audio_queue.put(content)
-      print(f"[CLIENT TO AGENT]: {data}")
-    elif mime_type == "audio/pcm":
-      # Send an audio data
-      decoded_data = base64.b64decode(data)
-      await audio_queue.put(decoded_data)
-      #live_request_queue.send_realtime(Blob(data=decoded_data, mime_type=mime_type))
-    else:
-      raise ValueError(f"Mime type not supported: {mime_type}")
+  try:
+    while True:
+      # Decode JSON message
+      idle_time = 0
+      IDLE_TIMEOUT_SECONDS = 30
+      PING_INTERVAL = 10
+      try:
+        # Wait up to PING_INTERVAL for client message
+        message_json = await asyncio.wait_for(websocket.receive_text(), timeout=PING_INTERVAL)
+        message = json.loads(message_json)
+        mime_type = message["mime_type"]
+        data = message["data"]
+        
+        # Send the message to the agent
+        if mime_type == "text/plain":
+          # Send a text message
+          content = Content(role="user", parts=[Part.from_text(text=data)])
+          await audio_queue.put(content)
+          print(f"[CLIENT TO AGENT]: {data}")
+        elif mime_type == "audio/pcm":
+          # Send an audio data
+          decoded_data = base64.b64decode(data)
+          await audio_queue.put(decoded_data)
+        else:
+          raise ValueError(f"Mime type not supported: {mime_type}")
+        
+        idle_time = 0  # Reset idle time if message received
+      except asyncio.TimeoutError:
+        idle_time += PING_INTERVAL
+        if idle_time >= IDLE_TIMEOUT_SECONDS:
+          raise asyncio.TimeoutError 
+        else:
+          await websocket.send_text(json.dumps({
+            "status": "waiting",
+            "mime_type": "text/plain",
+            "data": "Agent is waiting for you to respond"
+          }))
+  except WebSocketDisconnect as webSocketDisconnect:
+    raise webSocketDisconnect
+  except Exception as e:
+    raise e
 
 async def process_and_send_audio(live_request_queue, audio_queue):
   while True:
@@ -252,9 +277,19 @@ class ConnectionManager:
 
   async def connect(self, websocket: WebSocket):
     await websocket.accept()
+    await websocket.send_text(json.dumps({
+      "status": "open",
+      "mime_type": "text/plain",
+      "data": "Agent is ready to listen"
+    }))
     self.active_connections.append(websocket)
 
   def disconnect(self, websocket: WebSocket):
+    websocket.send_text(json.dumps({
+      "status": "closed",
+      "mime_type": "text/plain",
+      "data": "Agent has finished listening"
+    }))
     self.active_connections.remove(websocket)
 
   async def send_personal_message(self, message: str, websocket: WebSocket):
@@ -298,7 +333,9 @@ async def interview_session(response: str):
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
   """Client websocket endpoint"""
-  
+  live_events = None
+  live_request_queue = None
+
   # Wait for client connection
   await manager.connect(websocket)
   print(f"Client #{user_id} connected, audio mode: {is_audio}")
@@ -323,26 +360,43 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, is_audio: str):
 
     # Wait until the websocket is disconnected or an error occurs
     tasks = [client_to_agent_task, process_and_send_audio_task, receive_and_process_responses_task]
-    await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 
-    for task in tasks:
-      if task.done() and task.exception():
+    # Cancel any pending tasks immediately
+    for task in pending:
+      task.cancel()
+      try:
+        await task
+      except asyncio.CancelledError:
+        logger.info(f"✅ Cancelled task: {task.get_coro().__name__}")
+
+    # Handle exceptions and cancellations for completed tasks
+    for task in done:
+      if task.cancelled():
+        logger.info(f"⚠️ Task {task.get_coro().__name__} was cancelled")
+      elif task.exception():
         exc = task.exception()
-        logger.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
-        tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-        logger.error(tb)
-
-    # Close LiveRequestQueue
-    live_request_queue.close()
-
-    # Disconnected
-    print(f"Client #{user_id} disconnected")
+        errorCode = exc.code
+        if errorCode == 1000:
+          logger.info(f"✅ Session ended by user: {task.get_coro().__name__}")
+        else:
+          logger.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
+          tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+          logger.error(tb)
+          raise exc
+      
+        
 
   except WebSocketDisconnect:
+    # Close LiveRequestQueue
+    live_request_queue.close()
+    print(f"Client #{user_id} disconnected")
     manager.disconnect(websocket)
-  except KeyboardInterrupt:
-    logger.info("Exiting application via KeyboardInterrupt...")
   except Exception as e:
+    # Close LiveRequestQueue
+    live_request_queue.close()
+    print(f"Client #{user_id} disconnected")
+    manager.disconnect(websocket)
     logger.error(f"Unhandled exception in main: {e}")
     logger.error(f"{type(e).__name__}: {e}")
     logger.error(traceback.format_exc())
