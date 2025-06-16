@@ -10,7 +10,7 @@ import { StartSessionMascot } from "./StartSessionMascot";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Remix App" },
+    { title: "Live Session" },
     { name: "description", content: "Welcome to Remix!" },
   ];
 };
@@ -20,7 +20,7 @@ export default function Index() {
   const resumeData = useReactiveVar(uploadResumeRawTextDataVar);
   const jobDescriptionInput = useReactiveVar(JobDescriptionVar);
   return (
-    <div className="flex flex-row w-full h-screen bg-gray-100 gap-[50px]">
+    <div className="flex flex-row w-full h-screen bg-gray-100 gap-[10px]">
       <div className="flex flex-col mx-4  my-4 px-4 pb-20 h-96 w-[600px]">
         <div className="text-4xl font-bold mt-4 mb-6">Live Interview</div>
         <div className="text-lg font-bold mt-4 text-gray-500 mb-8">
@@ -47,7 +47,7 @@ export default function Index() {
           </div>
         )}
         {startSession && (
-          <div className="w-[1000px] ">
+          <div className="w-[900px] ">
             <WebSocketAudio />
           </div>
         )}

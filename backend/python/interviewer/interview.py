@@ -190,30 +190,40 @@ class InterviewRound:
       socket.process_and_send_audio(self.live_request_queue, self.audio_queue)
     )
 
-    broadcast_state_task = asyncio.create_task(
-      self.broadcast_state(websocket)
-    )
+    # broadcast_state_task = asyncio.create_task(
+    #   self.broadcast_state(websocket)
+    # )
     # Wait until the websocket is disconnected or an error occurs
     tasks = [
       client_to_agent_task, 
       process_and_send_audio_task, 
       receive_and_process_responses_task,
-      broadcast_state_task,
+      # broadcast_state_task,
     ]
-    await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 
-    for task in tasks:
-      if task.done() and task.exception():
+    # Cancel any pending tasks immediately
+    for task in pending:
+      task.cancel()
+      try:
+        await task
+      except asyncio.CancelledError:
+        logging.info(f"✅ Cancelled task: {task.get_coro().__name__}")
+
+    # Handle exceptions and cancellations for completed tasks
+    for task in done:
+      if task.cancelled():
+        logging.info(f"⚠️ Task {task.get_coro().__name__} was cancelled")
+      elif task.exception():
         exc = task.exception()
-        logging.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
-        tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-        logging.error(tb)
-
-    # Close LiveRequestQueue
-    self.live_request_queue.close()
-
-    # Disconnected
-    logging.info(f"Client #{self.session_id} disconnected")
+        errorCode = exc.code
+        if errorCode == 1000:
+          logging.info(f"✅ Session ended by user: {task.get_coro().__name__}")
+        else:
+          logging.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
+          tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+          logging.error(tb)
+          raise exc
 
   def close(self):
     """
