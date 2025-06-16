@@ -10,8 +10,14 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.events import Event
 from google.genai import types
 
-from .subagents import  behavioral_questioner, greeter, introducer, overviewer, closing_agent
-
+from .subagents import (
+  behavioral_questioner, 
+  greeter, 
+  introducer,
+  introduction_listener, 
+  overviewer, 
+  closing_agent,
+)
 
 class InterviewerAgent(BaseAgent):
   """
@@ -20,8 +26,9 @@ class InterviewerAgent(BaseAgent):
   This agent does not call the LLM, but routes requests to other agents
   based on predefined rules.
   """
-  introducer: LlmAgent
   greeter: LlmAgent
+  introducer: LlmAgent
+  introduction_listener: LlmAgent
   overviewer: LlmAgent
   behavioral_questioner: LlmAgent
   closer: LlmAgent
@@ -30,6 +37,7 @@ class InterviewerAgent(BaseAgent):
     self, 
     greeter: LlmAgent,
     introducer: LlmAgent,
+    introduction_listener: LlmAgent,
     overviewer: LlmAgent,
     behavioral_questioner: LlmAgent,
     closer: LlmAgent,
@@ -38,11 +46,12 @@ class InterviewerAgent(BaseAgent):
     super().__init__(
       greeter=greeter,
       introducer=introducer,
+      introduction_listener=introduction_listener,
       overviewer=overviewer,
       behavioral_questioner=behavioral_questioner,
       closer=closer,
       name=name,
-      sub_agents=[greeter, introducer, overviewer, behavioral_questioner, closer],
+      sub_agents=[greeter, introducer, introduction_listener, overviewer, behavioral_questioner, closer],
       description="Route agents based on the interview phase.",
     )
 
@@ -56,6 +65,9 @@ class InterviewerAgent(BaseAgent):
         yield event
     if ctx.session.state["phase"] == "introduction":
       async for event in self.introducer.run_async(ctx):
+        yield event
+    if ctx.session.state["phase"] == "introduction_response":
+      async for event in self.introduction_listener.run_async(ctx):
         yield event
     if ctx.session.state["phase"] == "overview":
       async for event in self.overviewer.run_async(ctx):
@@ -79,6 +91,9 @@ class InterviewerAgent(BaseAgent):
     if ctx.session.state["phase"] == "introduction":
       async for event in self.introducer.run_live(ctx):
         yield event
+    if ctx.session.state["phase"] == "introduction_response":
+      async for event in self.introduction_listener.run_live(ctx):
+        yield event
     if ctx.session.state["phase"] == "overview":
       async for event in self.overviewer.run_live(ctx):
         yield event
@@ -95,6 +110,7 @@ class InterviewerAgent(BaseAgent):
 root_agent = InterviewerAgent(
   greeter.agent,
   introducer.agent,
+  introduction_listener.agent,
   overviewer.agent,
   behavioral_questioner.agent,
   closing_agent.agent,
