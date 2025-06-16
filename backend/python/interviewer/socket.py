@@ -31,7 +31,8 @@ async def receive_and_process_responses(websocket, live_events):
       if event.interrupted:
         logging.info("🤐 INTERRUPTION DETECTED")
         await websocket.send_text(json.dumps({
-          "status": "interrupted",
+          "status": "open",
+          "signal": "interrupted",
           "mime_type": "text/plain",
           "data": "Response interrupted by user input"
         }))
@@ -42,7 +43,8 @@ async def receive_and_process_responses(websocket, live_events):
         if not interrupted:
           logging.info("✅ Gemini done talking")
           await websocket.send_text(json.dumps({
-            "status": "turn_complete",
+            "status": "open",
+            "signal": "turn_complete",
             "mime_type": "text/plain",
             "data": "Response completed by Gemini"
           }))
@@ -76,6 +78,7 @@ async def receive_and_process_responses(websocket, live_events):
         if audio_data:
           message = {
             "status": "open",
+            "signal":  None,
             "mime_type": "audio/pcm",
             "data": base64.b64encode(audio_data).decode("ascii")
           }
@@ -90,6 +93,7 @@ async def receive_and_process_responses(websocket, live_events):
           input_texts.append(part.text)
           message = {
             "status": "open",
+            "signal": None,
             "mime_type": "text/plain",
             "data": part.text
           }
@@ -106,6 +110,7 @@ async def receive_and_process_responses(websocket, live_events):
             output_texts.append(part.text)
             message = {
               "status": "open",
+              "signal": None,
               "mime_type": "text/plain",
               "data": part.text
             }
@@ -148,7 +153,7 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
           raise asyncio.TimeoutError 
         else:
           await websocket.send_text(json.dumps({
-            "status": "waiting",
+            "signal": "waiting",
             "mime_type": "text/plain",
             "data": "Agent is waiting for you to respond"
           }))
