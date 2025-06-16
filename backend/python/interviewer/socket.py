@@ -6,6 +6,7 @@ Using various events and Queues
 import logging
 import json
 import base64
+import asyncio
 
 from fastapi import WebSocket, WebSocketDisconnect
 from google.genai import types
@@ -13,9 +14,9 @@ from google.adk.events import Event
 from typing import Optional, AsyncGenerator
 
 
-async def receive_and_process_responses(websocket: WebSocket, live_events: AsyncGenerator[Event, None]):
+async def receive_and_process_responses(websocket, live_events):
   """Agent to client communication"""
-  
+
   # Track user and model outputs between turn completion events
   input_texts = []
   output_texts = []
@@ -30,6 +31,7 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
       if event.interrupted:
         logging.info("🤐 INTERRUPTION DETECTED")
         await websocket.send_text(json.dumps({
+          "status": "interrupted",
           "mime_type": "text/plain",
           "data": "Response interrupted by user input"
         }))
@@ -39,11 +41,11 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
       if event.turn_complete:
         if not interrupted:
           logging.info("✅ Gemini done talking")
-          message = {
+          await websocket.send_text(json.dumps({
+            "status": "turn_complete",
             "mime_type": "text/plain",
-            "data": "Response done (turn complete) by Gemini"
-          }
-          await websocket.send_text(json.dumps(message))
+            "data": "Response completed by Gemini"
+          }))
 
         if input_texts:
           # Get unique texts to prevent duplication
@@ -59,7 +61,7 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
         output_texts = []
         interrupted = False
 
-      # Read the Content and its first Part
+      # Read the types.Content and its first Part
       part: types.Part = (
         event.content and event.content.parts and event.content.parts[0]
       )
@@ -73,11 +75,12 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
         audio_data = part.inline_data and part.inline_data.data
         if audio_data:
           message = {
+            "status": "open",
             "mime_type": "audio/pcm",
             "data": base64.b64encode(audio_data).decode("ascii")
           }
           await websocket.send_text(json.dumps(message))
-          # print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
+          print(f"[AGENT TO CLIENT]: audio/pcm: {len(audio_data)} bytes.")
 
       # Process text content
       if part.text:
@@ -86,11 +89,12 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
           # User text shouldn't be sent to the client
           input_texts.append(part.text)
           message = {
+            "status": "open",
             "mime_type": "text/plain",
             "data": part.text
           }
           await websocket.send_text(json.dumps(message))
-          # print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+          print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
         else:
           # From the logs, we can see the duplicated text issue happens because
           # we get streaming chunks with "partial=True" followed by a final consolidated
@@ -101,35 +105,57 @@ async def receive_and_process_responses(websocket: WebSocket, live_events: Async
           if event.partial:
             output_texts.append(part.text)
             message = {
+              "status": "open",
               "mime_type": "text/plain",
               "data": part.text
             }
             await websocket.send_text(json.dumps(message))
-            # print(f"[AGENT TO CLIENT]: text/plain: {message}")
-      
+            print(f"[AGENT TO CLIENT]: text/plain: {message}")
+
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue):
   """Client to agent communication"""
-  while True:
-    # Decode JSON message
-    message_json = await websocket.receive_text()
-    message = json.loads(message_json)
-    mime_type = message["mime_type"]
-    data = message["data"]
-
-    # Send the message to the agent
-    if mime_type == "text/plain":
-      # Send a text message
-      content = types.Content(role="user", parts=[types.Part.from_text(text=data)])
-      await audio_queue.put(content)
-      # print(f"[CLIENT TO AGENT]: {data}")
-    elif mime_type == "audio/pcm":
-      # Send an audio data
-      decoded_data = base64.b64decode(data)
-      await audio_queue.put(decoded_data)
-      #live_request_queue.send_realtime(Blob(data=decoded_data, mime_type=mime_type))
-    else:
-      raise ValueError(f"Mime type not supported: {mime_type}")
+  try:
+    while True:
+      # Decode JSON message
+      idle_time = 0
+      IDLE_TIMEOUT_SECONDS = 30
+      PING_INTERVAL = 10
+      try:
+        # Wait up to PING_INTERVAL for client message
+        message_json = await asyncio.wait_for(websocket.receive_text(), timeout=PING_INTERVAL)
+        message = json.loads(message_json)
+        mime_type = message["mime_type"]
+        data = message["data"]
+        
+        # Send the message to the agent
+        if mime_type == "text/plain":
+          # Send a text message
+          content = types.Content(role="user", parts=[types.Part.from_text(text=data)])
+          await audio_queue.put(content)
+          print(f"[CLIENT TO AGENT]: {data}")
+        elif mime_type == "audio/pcm":
+          # Send an audio data
+          decoded_data = base64.b64decode(data)
+          await audio_queue.put(decoded_data)
+        else:
+          raise ValueError(f"Mime type not supported: {mime_type}")
+        
+        idle_time = 0  # Reset idle time if message received
+      except asyncio.TimeoutError:
+        idle_time += PING_INTERVAL
+        if idle_time >= IDLE_TIMEOUT_SECONDS:
+          raise asyncio.TimeoutError 
+        else:
+          await websocket.send_text(json.dumps({
+            "status": "waiting",
+            "mime_type": "text/plain",
+            "data": "Agent is waiting for you to respond"
+          }))
+  except WebSocketDisconnect as webSocketDisconnect:
+    raise webSocketDisconnect
+  except Exception as e:
+    raise e
 
 async def process_and_send_audio(live_request_queue, audio_queue):
   while True:
