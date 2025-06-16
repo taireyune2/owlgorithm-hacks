@@ -1,4 +1,5 @@
 from google.adk.agents import LlmAgent
+from google.adk.tools import ToolContext, FunctionTool
 from pydantic import BaseModel, Field
 
 from .. import utils
@@ -10,7 +11,8 @@ class QuestionJudgement(BaseModel):
 
 instruction = """
 You are a interview auditor/admin. 
-You are responsible for determining whether a follow-up question asked by the interviewer is appropriate based on the user's response.
+You are responsible for determining whether a follow-up question asked by the interviewer is appropriate 
+based on the user's response.
 
 Here is the response from the user:
 
@@ -37,14 +39,15 @@ Respond ONLY in valid JSON format following this schema:
 ```
 
 Do NOT include any explanations, context, or text outside of this JSON object.
-"""
 
+If "yes", move onto the next phase to ask the user the follow-up question.
+"""
 agent = LlmAgent(
   name="question_judge", 
   description="Summarizes the response from user.",
   model="gemini-2.0-flash",
   instruction=instruction,
-  # tools=[],
+  #tools=[],
   output_key="question_judgement", 
   output_schema=QuestionJudgement,
   disallow_transfer_to_parent=True,

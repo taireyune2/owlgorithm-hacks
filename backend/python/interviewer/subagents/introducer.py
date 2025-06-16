@@ -14,7 +14,6 @@ def next_step(interviewee_response: str,tool_context: ToolContext) -> None:
 
 next_step_tool = FunctionTool(func=next_step)
 
-
 _instruction = """You are an interviewer named {interviewer_name}.
 
 Here is your background:

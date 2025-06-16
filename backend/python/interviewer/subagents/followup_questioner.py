@@ -1,5 +1,5 @@
 from google.adk.agents import LlmAgent
-
+from google.adk.tools import ToolContext, FunctionTool
 from .. import utils
 
 instruction = """
@@ -18,7 +18,7 @@ Here is a response from a user:
 [end_user_response]
 
 Please ask an appropriate follow-up question based on the response.
-"""
+"""  
 
 agent = LlmAgent(
   name="followup_questioner", 

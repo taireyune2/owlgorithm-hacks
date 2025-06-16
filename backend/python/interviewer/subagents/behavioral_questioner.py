@@ -2,14 +2,12 @@ from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
-
 _interview_questions = [
   "Describe a situation where you disagreed with a team member. How did you handle it?",
   "Describe a time you got feedback that was hard to hear. How did you handle it?",
   "Give an example of a time you took initiative outside your job scope.",
   "Tell me about a time you had to make a difficult decision with limited data.",
 ]
-
 
 def get_next_question(tool_context: ToolContext) -> dict[str, str]:
   """
@@ -37,9 +35,59 @@ def get_next_question(tool_context: ToolContext) -> dict[str, str]:
 
 get_next_question_tool = FunctionTool(func=get_next_question)
 
+def next_step(interviewee_response: str, tool_context: ToolContext) -> None:
+  """
+  Sends user response to the follow-up agent to generate follow-up question.
+  """
+  if tool_context.state["phase"] == "behavioral_question":
+    tool_context.state["phase"] = "answering" 
+    tool_context.state["user_response"] = interviewee_response
+    tool_context.actions.transfer_to_agent = "followup_questioner"
+
+next_step_tool = FunctionTool(func=next_step)
+
+def get_followup_question(tool_context: ToolContext) -> dict[str, str]:
+  if tool_context.state["phase"] == "answering":
+    tool_context.state["phase"] = "followup_question"
+
+  followup_question = tool_context.state.get("followup_question")
+
+  if not followup_question:
+    raise ValueError("No followup question")
+  
+  return {"followup_question": followup_question}
+
+get_followup_question_tool = FunctionTool(func=get_followup_question)
+
+def check_followup_question(tool_context: ToolContext) -> None:
+  """
+  Checks the appropriateness of the follow-up question.
+  """
+  response = tool_context.state.get("user_response")
+  followup_question = tool_context.state.get("followup_question")
+
+  if not response and not followup_question:
+    raise ValueError("No user response or follow-up question")
+
+  tool_context.state["phase"] = "judging"
+  tool_context.actions.transfer_to_agent = "question_judge"
+
+  judgment = tool_context.state.get("question_judgement")
+  
+  if judgment is None:
+    raise ValueError("Followup not checked")
+  
+  if judgment.is_appropriate:
+    tool_context.state["phase"] = "asking followup"
+
+check_followup_question_tool = FunctionTool(func=check_followup_question)
+
+
 _instruction = """You are an interviewer responsible for asking the interviewee behavioral questions.
 
 Call the 'get_next_question_tool' to get the next question to ask the interviewee.
+When the interviewee has finished answering the question, you can proceed to next phase
+by calling the 'get_followup_question_tool' using the 'interviewee_response.' 
 """
 
 agent = LlmAgent(
@@ -47,10 +95,16 @@ agent = LlmAgent(
   description="Ask the interviewee behavioral questions.",
   model="gemini-2.0-flash",
   instruction=_instruction,
-  tools=[get_next_question_tool], 
+  #tools=[get_next_question_tool], 
+  tools = [get_next_question_tool, 
+           next_step_tool, 
+           get_followup_question_tool,
+           check_followup_question_tool],
   generate_content_config=types.GenerateContentConfig(
     temperature=2.0
   ),
 )
 
 #Function call that calls the followup question sequence, calling followup_questioner, ontopic_detector, question_judge
+
+# Add next step function to store user response to then sendd to followup questioner
