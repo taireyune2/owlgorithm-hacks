@@ -95,13 +95,13 @@ def check_inputs_callback(callback_context: CallbackContext) -> Optional[types.C
   if resume_judgement.get("is_resume", False) and job_description_judgement.get("is_job_description", False):
     return None
   
-  # error_message = "Invalid inputs: "
-  # if not resume_judgement.get("is_resume", False):
-  #   error_message += f"Resume check failed: {resume_judgement.get("explanation", "")}. "
-  # if not job_description_judgement.get("is_job_description", False):
-  #   error_message += f"Job description check failed: {job_description_judgement.get("explanation", "")}."
-  # logging.info(f"User uploaded invalid background info: {error_message}")
-  # return types.Content(role="agent", parts=[types.Part(text=error_message)])
+  error_message = "Invalid inputs: "
+  if not resume_judgement.get("is_resume", False):
+    error_message += f"Resume check failed: {resume_judgement.get("explanation", "")}. "
+  if not job_description_judgement.get("is_job_description", False):
+    error_message += f"Job description check failed: {job_description_judgement.get("explanation", "")}."
+  logging.info(f"User uploaded invalid background info: {error_message}")
+  return types.Content(role="agent", parts=[types.Part(text=error_message)])
 
 
 _instruction = """You are a person who is hiring. Your name is {interviewer_name}.
