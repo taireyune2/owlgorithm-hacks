@@ -128,31 +128,33 @@ export const WebSocketAudio = () => {
 
   const handleStartAudio = async () => {
     if (isRecording) return;
-
     setIsRecording(true);
-
+    const payload = {
+      resume: {
+        rawText: resumeData,
+        email: null,
+        phone: null,
+      },
+      job_description: {
+        rawText: jobDescriptionInput,
+        link: null,
+      },
+      session_id: sessionIdStarted,
+    };
     try {
-      const ws = await connectWebsocket();
-      const payload = {
-        resume: {
-          rawText: resumeData,
-          email: null,
-          phone: null,
-        },
-        job_description: {
-          rawText: jobDescriptionInput,
-          link: null,
-        },
-        session_id: sessionIdStarted,
-      };
-
-      await fetch(`http://localhost:8000/upload`, {
+      const response = await fetch(`http://localhost:8000/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        setIsRecording(false);
+        throw new Error("Failed to upload resume data");
+      }
+
+      const ws = await connectWebsocket();
 
       const [playerNode] = await startAudioPlayerWorklet((speaking) => {
         setIsSpeaking(speaking);
@@ -172,7 +174,7 @@ export const WebSocketAudio = () => {
         }
       });
     } catch (error) {
-      console.error(" Failed to start audio session:", error);
+      console.error("Failed to start audio session:", error);
       setMicStatus("Mic/websocket error");
       setIsRecording(false);
     }
