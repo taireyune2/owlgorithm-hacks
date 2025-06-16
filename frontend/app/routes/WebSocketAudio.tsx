@@ -5,6 +5,7 @@ import { useReactiveVar } from "@apollo/client";
 import { uploadResumeRawTextDataVar } from "./UploadResume";
 import { JobDescriptionVar } from "./JobDescriptionInput";
 import { InterviewerMascot } from "./InterviewerMascot";
+import { Button } from "@mui/material";
 
 interface Message {
   id: string;
@@ -14,6 +15,7 @@ interface Message {
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
+  const [wsStatus, setWsStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -31,6 +33,10 @@ export const WebSocketAudio = () => {
       setSessionIdStarted(sessionId);
       wsUrlRef.current = `ws://localhost:8000/ws/${sessionId}`;
     }
+  }, []);
+
+  useEffect(() => {
+    setWsStatus(wsStatus);
   }, []);
 
   console.log("session id", sessionIdStarted);
@@ -68,6 +74,8 @@ export const WebSocketAudio = () => {
 
       ws.onmessage = (event) => {
         const message_from_server = JSON.parse(event.data);
+        console.log("taravat", message_from_server.signal);
+        setWsStatus(message_from_server.status);
         console.log("[AGENT TO CLIENT]", message_from_server);
         console.log("[RAW MESSAGE]", event.data);
 
@@ -198,24 +206,26 @@ export const WebSocketAudio = () => {
       </h2>
 
       <div className="flex gap-4 mb-4">
-        <button
+        <Button
           onClick={handleStartAudio}
-          disabled={isRecording}
-          className={`flex-1 py-2 rounded ${
-            isRecording
-              ? "bg-red-500 cursor-not-allowed"
-              : "bg-green-500 hover:bg-green-600"
-          } text-white font-semibold transition-colors duration-200`}
+          sx={{ width: 200 }}
+          disabled={wsStatus == "open"}
+          variant="contained"
+          color={isRecording ? "success" : "primary"}
         >
           {isRecording ? "Recording..." : "Start Recording"}
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="contained"
+          sx={{ width: 200 }}
+          disabled={!isRecording}
+          color="secondary"
           onClick={handleEndAudio}
           className="flex-1 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors duration-200"
         >
           End
-        </button>
+        </Button>
       </div>
 
       <div className="text-sm font-medium text-gray-600 mb-2">{micStatus}</div>
