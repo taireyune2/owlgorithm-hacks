@@ -30,24 +30,17 @@ async def receive_and_process_responses(websocket, live_events):
       # Check for interruption
       if event.interrupted:
         logging.info("🤐 INTERRUPTION DETECTED")
-        await websocket.send_text(json.dumps({
-          "status": "open",
-          "signal": "interrupted",
-          "mime_type": "text/plain",
-          "data": "Response interrupted by user input"
-        }))
         interrupted =  True
 
       # Check for turn completion
       if event.turn_complete:
-        if not interrupted:
-          logging.info("✅ Gemini done talking")
-          await websocket.send_text(json.dumps({
-            "status": "open",
-            "signal": "turn_complete",
-            "mime_type": "text/plain",
-            "data": "Response completed by Gemini"
-          }))
+        logging.info("✅ Gemini done talking")
+        await websocket.send_text(json.dumps({
+          "status": "open",
+          "signal": "turn_complete",
+          "mime_type": "text/plain",
+          "data": "Response completed by Gemini"
+        }))
 
         if input_texts:
           # Get unique texts to prevent duplication
@@ -78,7 +71,6 @@ async def receive_and_process_responses(websocket, live_events):
         if audio_data:
           message = {
             "status": "open",
-            "signal":  None,
             "mime_type": "audio/pcm",
             "data": base64.b64encode(audio_data).decode("ascii")
           }
@@ -93,7 +85,6 @@ async def receive_and_process_responses(websocket, live_events):
           input_texts.append(part.text)
           message = {
             "status": "open",
-            "signal": None,
             "mime_type": "text/plain",
             "data": part.text
           }
@@ -110,7 +101,6 @@ async def receive_and_process_responses(websocket, live_events):
             output_texts.append(part.text)
             message = {
               "status": "open",
-              "signal": None,
               "mime_type": "text/plain",
               "data": part.text
             }
