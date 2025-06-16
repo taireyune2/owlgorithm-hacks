@@ -1,4 +1,6 @@
-# Python
+# Backend Application
+
+The backend for the Owlgorithm application. This app handles the 
 
 ## Setup
 path: backend/
@@ -9,31 +11,26 @@ which python
 pip install -r requirements-dev.txt
 ```
 
-## Console Demo
-
-path: backend/python
-```
-python console.py --config-dir ../configs/console-dev-config.json
-```
-
-When prompted to enter User ID, enter any random characters.  
-When prompted to provide text file response, enter `../examples/response.txt` for 
-the provided response.
-
 ## Run Service
 
 ### Modify ADK source code
 
-- Find the file functions.py using control-p (command-p) within the new .venv folder.
+- Find the file functions.py using control-p (command-p) within the new .venv folder: .venv/lib/python3.12/site-packages/google/adk/flows/llm_flows/functions.py. 
+
 - Search for trace_tool_call on line 288. Comment out the whole function call.
 
 ### Run Service
 
+From the root/backend/python, run
 ```
-python service.py --config-dir ../configs/dev.json
+uvicorn service:app --reload
+
+# or python service.py
 ```
 
-To interact with the application, either go directly to localhost:8000 or follow the frontend README to spinup the react application.
+To interact with the application in dev model, go directly to localhost:8000.
+
+To use the full UI interface, follow the frontend README to spinup the react application.
 
 ### pytest
 
