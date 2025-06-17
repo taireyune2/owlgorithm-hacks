@@ -149,6 +149,11 @@ class InterviewRound:
         live_request_queue=self.live_request_queue,
         run_config=self.interviewer.get_run_configs()
       )
+
+      # Initiate the agent to start first instead of waiting for the user's input
+      self.live_request_queue.send_content(
+        types.Content(role="user", parts=[types.Part(text="Hello! Let's start the interview.")])
+      )
       logging.info(f"Interview round {self.session_id} initialized with interviewer {self.interviewer.name}.")
     except Exception as e:
       logging.error(f"Unhandled error in client_to_agent_messaging: {e}")
