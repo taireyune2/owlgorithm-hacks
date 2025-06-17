@@ -5,7 +5,7 @@ import { useReactiveVar } from "@apollo/client";
 import { uploadResumeRawTextDataVar } from "./UploadResume";
 import { JobDescriptionVar } from "./JobDescriptionInput";
 import { InterviewerMascot } from "./InterviewerMascot";
-import { Button } from "@mui/material";
+import { Alert, Button } from "@mui/material";
 
 interface Message {
   id: string;
@@ -15,6 +15,7 @@ interface Message {
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
+  const [uploadFailed, setUploadFailed] = useState("");
   const [wsStatus, setWsStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
@@ -157,8 +158,15 @@ export const WebSocketAudio = () => {
         },
         body: JSON.stringify(payload),
       });
+      console.log("Upload response:", response);
+
       if (!response.ok) {
         setIsRecording(false);
+        const errorData = await response.json();
+        console.error("Error details:", errorData.detail);
+        setUploadFailed(
+          `Upload Failed, please ensure valid job description or resume has been uploaded`
+        );
         throw new Error("Failed to upload resume data");
       }
 
@@ -183,7 +191,7 @@ export const WebSocketAudio = () => {
       });
     } catch (error) {
       console.error("Failed to start audio session:", error);
-      setMicStatus("Mic/websocket error");
+      setMicStatus("Socket connection failed, please try again");
       setIsRecording(false);
     }
   };
@@ -227,8 +235,8 @@ export const WebSocketAudio = () => {
           End
         </Button>
       </div>
-
-      <div className="text-sm font-medium text-gray-600 mb-2">{micStatus}</div>
+      {uploadFailed && <Alert severity="error">{uploadFailed}</Alert>}
+      {micStatus && <Alert severity="warning">{micStatus}</Alert>}
       <div className="sticky top-20z-10 flex justify-center mb-4">
         <InterviewerMascot speaking={isSpeaking} />
       </div>
