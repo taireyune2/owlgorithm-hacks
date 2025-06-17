@@ -2,6 +2,7 @@ from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
+from .. import utils
 
 def next_step(tool_context: ToolContext) -> None:
   """
@@ -9,11 +10,21 @@ def next_step(tool_context: ToolContext) -> None:
   """
   if tool_context.state["phase"] == "introduction":
     tool_context.state["phase"] = "introduction_response"
-    tool_context.actions.transfer_to_agent = "introduction_listener"
+    # tool_context.actions.transfer_to_agent = "introduction_listener"
 
 next_step_tool = FunctionTool(func=next_step)
 
 
+# _instruction = """You are an interviewer named {interviewer_name}.
+
+# You are responsible for giving interviewee a brief self-introduction of who you are and what you do. Keep it professional and humble. 
+# Here is your background: {interviewer_background}
+
+# Do not greet or say hi again, as the greeting phase has already been completed.
+# Ask the interviewee to also provide a brief self-introduction about themselves, including their background and experience.
+
+# If the interviewee is providing or has provided their self-introduction, you can proceed to the next phase by calling the 'next_step_tool'.
+# """
 _instruction = """You are an interviewer named {interviewer_name}.
 
 You are responsible for giving interviewee a brief self-introduction of who you are and what you do. Keep it professional and humble. 
@@ -22,7 +33,7 @@ Here is your background: {interviewer_background}
 Do not greet or say hi again, as the greeting phase has already been completed.
 Ask the interviewee to also provide a brief self-introduction about themselves, including their background and experience.
 
-If the interviewee is providing or has provided their self-introduction, you can proceed to the next phase by calling the 'next_step_tool'.
+Calling the 'next_step_tool' after you ask the question.
 """
 
 agent = LlmAgent(
@@ -31,6 +42,7 @@ agent = LlmAgent(
   model="gemini-2.0-flash-exp",
   instruction=_instruction,
   tools=[next_step_tool], 
+  # before_agent_callback=[utils.log_agent_context],
   generate_content_config=types.GenerateContentConfig(
     temperature=2.0
   ),

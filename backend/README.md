@@ -40,3 +40,9 @@ pytest interviewer/agent_behavior_test.py::test_core
 ```
 
 
+
+client audio -> agent
+
+agent:
+  - respond with audio
+  - call function
