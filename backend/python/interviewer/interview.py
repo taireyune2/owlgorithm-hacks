@@ -5,6 +5,7 @@ import time
 import random
 import asyncio
 import base64
+from typing import Optional, AsyncGenerator
 
 from fastapi import WebSocket, WebSocketDisconnect
 from google.adk.sessions import InMemorySessionService, BaseSessionService, Session
@@ -12,12 +13,15 @@ from google.adk.runners import InMemoryRunner, Runner
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
-from google.adk.events import Event
-from typing import Optional, AsyncGenerator
+from google.adk.events import Event, EventActions
+from google.adk.tools import ToolContext, FunctionTool
 
-from .agent import root_agent
+
+# from .agent import root_agent
+from .dummy_agent import get_step, root_agent
 from .preparer import preparation_agent
 from . import socket
+from google.adk.agents import LlmAgent
 
 
 class Interviewer:
@@ -108,7 +112,6 @@ class InterviewRound:
   live_request_queue: LiveRequestQueue
   audio_queue: asyncio.Queue
 
-  
   def __init__(
     self, 
     app_name: str,
@@ -119,19 +122,56 @@ class InterviewRound:
     self.session_id = session_id
     self.interviewer = interviewer
     self.audio_queue = asyncio.Queue()
+    self._index = 1
+
+  def _get_dynamic_instruction(self) -> str:
+    """
+    Generate dynamic instruction for the agent.
+
+    Returns:
+      str: Instruction for the agent.
+    """
+    instructions = [
+      "Say you studied mathematics",
+      "Say you graduated 2014",
+      "Say you work at Google",
+    ]
+    current = instructions[self._index]
+    logging.info(f"Dynamic instruction: {current}")
+    return current
+
+  def get_root_agent(self):
+    instruction = """You are an interviewer named {interviewer_name}.
+
+Please ALWAYS follow the instructions from 'get_instruction_tool'.
+
+"""
+    get_instruction_tool = FunctionTool(func=self._get_dynamic_instruction)
+    return LlmAgent(
+      name="interviewer",
+      description="Converse with the user by following the instructions from 'get_instruction_tool'.",
+      model="gemini-2.0-flash-exp",
+      instruction=instruction,
+      tools=[get_instruction_tool], 
+      generate_content_config=types.GenerateContentConfig(
+        temperature=2.0
+      ),
+      include_contents='none',
+    )
 
   async def initialize_agent(self, resume: str, job_description: str) -> tuple[AsyncGenerator[Event, None], LiveRequestQueue]:
     """
     Start the interview round.
     """
     try:
-      runner = InMemoryRunner(
+      self.root_agent = self.get_root_agent()
+      self.runner = InMemoryRunner(
         app_name=self.app_name,
-        agent=root_agent,
+        agent=self.root_agent,
       )
 
       # Create a Session
-      self.session = await runner.session_service.create_session(
+      self.session = await self.runner.session_service.create_session(
         app_name=self.app_name,
         user_id=self.session_id,  # Replace with actual user ID
         state={
@@ -140,18 +180,19 @@ class InterviewRound:
           # "interviewee_name": "Mike",
           "resume": resume,
           "job_description": job_description,
-          "phase": "greeting"
+          "phase": "greeting",
+          "count": 0,
         }
       )
       self.live_request_queue = LiveRequestQueue()
-      self.live_events = runner.run_live(
+      self.live_events = self.runner.run_live(
         session=self.session,
         live_request_queue=self.live_request_queue,
         run_config=self.interviewer.get_run_configs()
       )
       logging.info(f"Interview round {self.session_id} initialized with interviewer {self.interviewer.name}.")
     except Exception as e:
-      logging.error(f"Unhandled error in client_to_agent_messaging: {e}")
+      logging.error(f"Unhandled error in initialize_agent: {e}")
       logging.error(traceback.format_exc())
       raise e
 
@@ -163,12 +204,20 @@ class InterviewRound:
   
   async def broadcast_state(self, websocket: WebSocket) -> None:
     while True:
-      message = {
-        "mime_type": "text",
-        "data": self.session.state["phase"]
-      }
-      logging.info(f"Broadcasting state: {message['data']}")
-      await websocket.send_text(json.dumps(message))
+      actions_with_update = EventActions(
+        state_delta={"count": (self.session.state["count"] + 1) % 3}
+      )
+      self._index = (self._index + 1) % 3
+      system_event = Event(
+        invocation_id="update_count",
+        author="system", # Or 'agent', 'tool' etc.
+        actions=actions_with_update,
+        # content might be None or represent the action taken
+      )
+      await self.runner.session_service.append_event(self.session, system_event)
+      logging.info(f"Broadcasting state: index={self._index} phase={self.session.state['phase']}, count={self.session.state['count']}")
+      
+      # await websocket.send_text(json.dumps(message))
       await asyncio.sleep(5)
 
   async def run(self, websocket: WebSocket) -> None:
@@ -190,15 +239,15 @@ class InterviewRound:
       socket.process_and_send_audio(self.live_request_queue, self.audio_queue)
     )
 
-    # broadcast_state_task = asyncio.create_task(
-    #   self.broadcast_state(websocket)
-    # )
+    broadcast_state_task = asyncio.create_task(
+      self.broadcast_state(websocket)
+    )
     # Wait until the websocket is disconnected or an error occurs
     tasks = [
       client_to_agent_task, 
       process_and_send_audio_task, 
       receive_and_process_responses_task,
-      # broadcast_state_task,
+      broadcast_state_task,
     ]
     done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
 

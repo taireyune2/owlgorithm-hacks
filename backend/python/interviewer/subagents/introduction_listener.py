@@ -3,7 +3,7 @@ from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 
 
-def next_step(interviewee_response: str,tool_context: ToolContext) -> None:
+def next_step(interviewee_response: str, tool_context: ToolContext) -> None:
   """
   Progress the conversation to the next phase.
   """
@@ -15,16 +15,15 @@ def next_step(interviewee_response: str,tool_context: ToolContext) -> None:
 next_step_tool = FunctionTool(func=next_step)
 
 
-_instruction = """You are an interviewer named {interviewer_name}.
+_instruction = """You are responsible for listening to the interviewee's self-introduction.
 
-You are responsible for listening to the interviewee's self-introduction.
+DO NOT INTERRUPT the interviewee while they are speaking.
+ONLY REPLY with words of affirmation like "Uh-huh", "Hmm", "Okay", etc.
 
-Please encourage the interviewee to provide their self-introduction.
-
-Respond with "Uh-huh", "Hmm", "Okay", etc.
-
-If the interviewee has finished giving a full self-introduction, please call the 'next_step_tool' to proceed to the next step.
+Once the interviewee has given a full self-introduction which is about 50 words, 
+call the 'next_step_tool' with the content of the interviewee's self-introduction to continue.
 """
+
 
 agent = LlmAgent(
   name="introduction_listener",
