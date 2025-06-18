@@ -18,111 +18,76 @@ from google.adk.tools import ToolContext, FunctionTool
 
 
 # from .agent import root_agent
-from .dummy_agent import get_step, root_agent
-from .preparer import preparation_agent
+
+from .preparer import prepare_interview
+from .agent import TextAgentSystem
+from .live import LiveAgentSystem
 from . import socket
-from google.adk.agents import LlmAgent
 
-
-class Interviewer:
-  app_name: str
-  name: str
-  voice: str
-  background: str
-
-  def __init__(self, app_name: str, name: str, voice: str, session_service: InMemorySessionService):
-    self.app_name = app_name 
-    self.name = name
-    self.voice = voice
-    self.session_service: InMemorySessionService = session_service
-
-  async def prep_background(self, session_id: str, resume: str, job_description: str) -> str:
-    """
-    Run Synthesizer agent to prepare background information.
-    """
-    self.resume = resume
-    self.job_description = job_description
-
-    runner: Runner = Runner(
-      app_name=self.app_name,
-      agent=preparation_agent,
-      session_service=self.session_service
-    )
-    session = await self.session_service.create_session(
-      app_name=self.app_name,
-      user_id=session_id,
-      session_id=session_id,
-      state={
-        "interviewer_name": self.name,
-        "resume": resume,
-        "job_description": job_description
-      }
-    )
-
-    results = []
-    async for event in runner.run_async(
-      user_id=session_id,
-      session_id=session_id,
-      new_message=types.Content(
-        role="user",
-        parts=[types.Part(text="")]
-      )
-    ):
-      if event.is_final_response():
-        results.append(event.content.parts[0].text)
-
-    if not results:
-      raise Exception("Agents failed to generate a proper response.")
-    if results[-1].startswith("Invalid inputs: "):
-      raise ValueError(results[-1])
-    
-    self.background = results[-1]
-    return results[-1]
-
-  def get_run_configs(self) -> RunConfig:
-    """
-    Generate run configs from presets and dynamic values.
-    """
-    return RunConfig(
-      streaming_mode=StreamingMode.BIDI,
-      speech_config=types.SpeechConfig(
-        voice_config=types.VoiceConfig(
-          prebuilt_voice_config=types.PrebuiltVoiceConfig(
-            voice_name=self.voice
-          )
-        )
-      ),
-      response_modalities=["AUDIO"],
-      output_audio_transcription=types.AudioTranscriptionConfig(),
-      input_audio_transcription=types.AudioTranscriptionConfig(),
-    )
-
+  # session_id: str
+  # socket: WebSocket
+  # latest_signal: float
+  # session: Session
+  # live_events: AsyncGenerator[Event, None]
+  # live_request_queue: LiveRequestQueue
+  # audio_queue: asyncio.Queue
+  # self.audio_queue = asyncio.Queue()
 
 class InterviewRound:
+  
   """
   Represents a single round of the interview.    
   """
-  app_name: str
-  interviewer: Interviewer
-  session_id: str
-  socket: WebSocket
-  latest_signal: float
-  session: Session
-  live_events: AsyncGenerator[Event, None]
-  live_request_queue: LiveRequestQueue
-  audio_queue: asyncio.Queue
-
   def __init__(
     self, 
     app_name: str,
     session_id: str, 
-    interviewer: Interviewer,
+    session_service: InMemorySessionService
   ):
     self.app_name = app_name
     self.session_id = session_id
-    self.interviewer = interviewer
-    self.audio_queue = asyncio.Queue()
-    self._index = 1
+
+    self.client_text_queue = asyncio.Queue()
+    self.agent_text_queue = asyncio.Queue()
+
+    self.text_agent_system = TextAgentSystem(
+      app_name=app_name,
+      session_service=session_service,
+    )
+
+  async def start_session(self, interviewer_name: str, resume: str, job_description: str) -> str:
+    """
+    Prepare the interview round by checking the inputs and creating the background info.
+    """
+    interviewer_background = await prepare_interview(
+      app_name=self.app_name,
+      session_id=self.session_id,
+      interviewer_name=interviewer_name,
+      resume=resume,
+      job_description=job_description,
+      session_service=self.text_agent_system.session_service,
+    )
+
+    await self.text_agent_system.start_session(
+      session_id=self.session_id,
+      interviewer_name=interviewer_name,
+      resume=resume,
+      job_description=job_description,
+      interviewer_background=interviewer_background,
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   def _get_dynamic_instruction(self) -> str:
     """
@@ -283,63 +248,4 @@ Please ALWAYS follow the instructions from 'get_instruction_tool'.
     logging.info(f"Interview round {self.session_id} closed.")
 
 
-class InterviewManager:
-  """
-  Facilitate adding/removing interview rounds
-  and managing their lifecycle.
-  """
-  def __init__(self, config: dict):
-    self.interviews: dict[str, InterviewRound] = {}
-    self.config = config
-    self.session_service = InMemorySessionService()
-
-  async def initialize_interview(self, session_id: str, resume: str, job_description: str):
-    """
-    Prepare the interview round.
-    Setup interviewer with background.
-    Initialize agent.
-    """
-    if session_id in self.interviews:
-      logging.warning(f"Session {session_id} already exists. Overwriting existing interview round.")
-      self.disconnect(session_id)
-    
-    choice = random.choice(self.config["voices"]) 
-    interviewer = Interviewer(
-      self.config["name"], 
-      choice["name"], 
-      choice["voice"], 
-      self.session_service
-    )
-    await interviewer.prep_background(session_id, resume, job_description)
-
-    interview_round = InterviewRound(
-      app_name=self.config["name"],
-      session_id=session_id,
-      interviewer=interviewer
-    )
-    self.interviews[session_id] = interview_round
-    await interview_round.initialize_agent(resume, job_description)
-
-  async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3):
-    """
-    Check if Interview Round is ready. Once ready, accept websocket connection.
-    """
-    interview_round = self.interviews.get(session_id, None)
-    if not interview_round or not interview_round.is_ready():
-      if tries > 0:
-        logging.info(f"Interview Round {session_id} is not ready. Retrying in 1 second with {tries} retries...")
-        await asyncio.sleep(1)
-        return await self.connect(websocket, session_id, tries - 1)
-      else:
-        logging.error(f"Interview Round {session_id} is not ready after retries. Disconnecting.")
-        self.disconnect(session_id)
-        raise WebSocketDisconnect(f"Interview Round {session_id} is not ready after retries.")
-    
-    return await interview_round.run(websocket)
-
-  def disconnect(self, session_id: str):
-    interview_round = self.interviews.get(session_id, None)
-    if interview_round:
-      interview_round.close()
-      del self.interviews[interview_round.session_id]
 
