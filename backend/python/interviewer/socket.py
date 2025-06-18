@@ -95,17 +95,17 @@ async def receive_and_process_responses(websocket, live_events):
         # we get streaming chunks with "partial=True" followed by a final consolidated
         # response with "partial=None" containing the complete text
 
-          # Check in the event string for the partial flag
-          # Only process messages with "partial=True"
-          if event.partial:
-            output_texts.append(part.text)
-            message = {
-              "status": "open",
-              "mime_type": "text/plain",
-              "data": part.text
-            }
-            await websocket.send_text(json.dumps(message))
-            print(f"[AGENT TO CLIENT]: text/plain: {message}")
+        # Check in the event string for the partial flag
+        # Only process messages with "partial=True"
+        if event.partial:
+          output_texts.append(part.text)
+          message = {
+            "status": "open",
+            "mime_type": "text/plain",
+            "data": part.text
+          }
+          await websocket.send_text(json.dumps(message))
+          print(f"[AGENT TO CLIENT]: text/plain: {message}")
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, consecutiveIdleCountAllowed):
   """Client to agent communication"""
