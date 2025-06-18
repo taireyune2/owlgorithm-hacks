@@ -15,7 +15,8 @@ from google.genai import types
 from google.adk.events import Event
 from typing import Optional, AsyncGenerator
 
-from .agent import root_agent
+from dummy_agent.agent import root_agent
+# from .agent import root_agent
 from .preparer import preparation_agent
 from . import socket
 
