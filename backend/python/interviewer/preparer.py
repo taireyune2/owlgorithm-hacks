@@ -1,11 +1,17 @@
-from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
-from google.adk.agents.callback_context import CallbackContext
-from google.adk.tools import ToolContext, FunctionTool
-from google.genai import types
 from pydantic import BaseModel, Field
 from typing import Optional
 import random
 import logging
+import asyncio
+
+from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.agents.callback_context import CallbackContext
+
+from google.adk.sessions import InMemorySessionService, Session
+from google.adk.runners import Runner
+from google.genai import types
+
+
 
 ###################### Resume ###############################
 class ResumeJudgement(BaseModel):
@@ -147,3 +153,53 @@ preparation_agent = SequentialAgent(
     interviewer_agent
   ],
 )
+
+
+############################## Run ######################################
+async def prepare_interview(
+  app_name: str,
+  session_id: str,
+  interviewer_name: str,
+  resume: str,
+  job_description: str,
+  session_service: InMemorySessionService,
+) -> str:
+  """
+  Prepare the interview round by checking the inputs and creating the background info.
+  """
+  runner: Runner = Runner(
+    app_name=app_name,
+    agent=preparation_agent,
+    session_service=session_service
+  )
+  session = await session_service.create_session(
+    app_name=app_name,
+    user_id=session_id,
+    session_id=session_id,
+    state={
+      "interviewer_name": interviewer_name,
+      "resume": resume,
+      "job_description": job_description,
+    }
+  )
+
+  results = []
+  async for event in runner.run_async(
+    user_id=session_id,
+    session_id=session_id,
+    new_message=types.Content(
+      role="user",
+      parts=[types.Part(text="")]
+    )
+  ):
+    if event.is_final_response():
+      results.append(event.content.parts[0].text)
+
+  if not results:
+    raise Exception("Agents failed to generate a proper response.")
+  if results[-1].startswith("Invalid inputs: "):
+    raise ValueError(results[-1])
+  
+  await runner.close()
+  await session_service.delete_session(session_id)
+  return results[-1]
