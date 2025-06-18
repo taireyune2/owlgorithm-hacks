@@ -4,10 +4,9 @@ from typing import AsyncGenerator, Optional
 import asyncio
 
 from google.adk.agents import (
-  BaseAgent, LlmAgent, SequentialAgent, ParallelAgent
+  BaseAgent, LlmAgent, 
 )
-from google.adk.sessions import InMemorySessionService, Session
-from google.adk.runners import Runner
+
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.events import Event
@@ -118,64 +117,3 @@ root_agent = InterviewerAgent(
   closing_agent.agent,
   name="root_agent"
 )
-
-############################ Run ######################################
-class TextAgentSystem:
-  """
-  Handles the lifecycle of the text agent.
-  """
-  def __init__(self, app_name: str, session_service: InMemorySessionService):
-    self.app_name = app_name
-    self.session_service = session_service
-    self.root_agent = root_agent
-    self.runner = Runner(
-      app_name=self.app_name,
-      agent=self.root_agent,
-      session_service=self.session_service
-    )
-
-  async def start_session(
-    self, 
-    session_id: str, 
-    interviewer_name: str,   
-    resume: str,
-    job_description: str,
-    interviewer_background: str,
-  ) -> Session:
-    """
-    Prepare session.
-    """
-    self.session = await self.session_service.create_session(
-      app_name=self.app_name,
-      user_id=session_id,
-      session_id=session_id,
-      state={
-        "interviewer_name": interviewer_name,
-        "resume": resume,
-        "job_description": job_description,
-        "interviewer_background": interviewer_background,
-        "interview_instructions": "",
-      }
-    )
-    return self.session
-  
-  async def close(self) -> None:
-    """
-    Close the session.
-    """
-    await self.session_service.delete_session(self.session.id)
-    await self.runner.close()
-
-  async def run(self, role, message):
-    """
-    Run the agent with the given message.
-    """
-    async for event in self.runner.run_async(
-      user_id=self.session.id,
-      session_id=self.session.id,
-      new_message=types.Content(
-        role=role,
-        parts=[types.Part(text=message)]
-      )
-    ):
-      continue
