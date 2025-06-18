@@ -152,7 +152,7 @@ class InterviewRound:
 
       # Initiate the agent to start first instead of waiting for the user's input
       self.live_request_queue.send_content(
-        types.Content(role="user", parts=[types.Part(text="Hello! Let's start the interview.")])
+        types.Content(role="user", parts=[types.Part(text="start")])
       )
       logging.info(f"Interview round {self.session_id} initialized with interviewer {self.interviewer.name}.")
     except Exception as e:
@@ -189,7 +189,8 @@ class InterviewRound:
     client_to_agent_task = asyncio.create_task(socket.client_to_agent_messaging(
       websocket, 
       self.live_request_queue, 
-      self.audio_queue
+      self.audio_queue,
+      consecutiveIdleCountAllowed
     ))
     process_and_send_audio_task = asyncio.create_task(
       socket.process_and_send_audio(self.live_request_queue, self.audio_queue)
