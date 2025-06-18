@@ -7,11 +7,11 @@ from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect, HTTPExce
 from pydantic import BaseModel
 from typing import Optional
 
-from . import interview
+from .manager import InterviewManager
 from common import configs
 
 
-manager = interview.InterviewManager(config=configs.file["agent"])
+manager = InterviewManager(config=configs.file["agent"])
 
 ##################### FastAPI endpoints ######################
 class Resume(BaseModel):
