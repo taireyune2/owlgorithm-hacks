@@ -108,12 +108,31 @@ class InterviewerAgent(BaseAgent):
     if ctx.end_invocation:
       return
 
-root_agent = InterviewerAgent(
-  greeter.agent,
-  introducer.agent,
-  introduction_listener.agent,
-  overviewer.agent,
-  behavioral_questioner.agent,
-  closing_agent.agent,
-  name="root_agent"
+# root_agent = InterviewerAgent(
+#   greeter.agent,
+#   introducer.agent,
+#   introduction_listener.agent,
+#   overviewer.agent,
+#   behavioral_questioner.agent,
+#   closing_agent.agent,
+#   name="root_agent"
+# )
+
+
+############################## dummy agent for instructions ##############################
+_instruction = """
+You are the head of the talent team.
+
+You are responsible for writing the instructions for the interview process.
+
+Please only respond with the instruction.
+
+Tell the interviewer to {}
+"""
+root_agent = LlmAgent(
+  name="Instruction Writer",
+  description="Writes instructions for the interview process.",
+  model="gemini-2.0-flash-exp",
+  instruction=_instruction,
+  output_key="interview_instructions",
 )

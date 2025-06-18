@@ -83,6 +83,10 @@ class ThoughtAgentSystem:
         "job_description": job_description,
         "interviewer_background": interviewer_background,
         "interview_instructions": "",
+        "immediate_agent_text": "",
+        "immediate_client_text": "",
+        "phase_agent_text": "",
+        "phase_client_text": "",
       }
     )
     return self.session
@@ -126,6 +130,15 @@ class ThoughtAgentSystem:
       actions=EventActions(state_delta=state_delta),
     )
     await self.runner.session_service.append_event(self.session, system_event)
+  
+  def get_instructions(self) -> str:
+    """
+    Get the instructions for the interviewer from session state.
+
+    Returns:
+      str: Instructions for the interviewer.
+    """
+    return self.session.state.get("interview_instructions", "")
   
   def get_state(self) -> dict:
     """

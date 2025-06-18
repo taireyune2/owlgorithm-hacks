@@ -32,55 +32,52 @@ class InterviewRound:
   """
   def __init__(
     self, 
-    app_name: str,
+    configs: dict,
     session_id: str, 
-    interviewer_name: str,
-    voice: str,
     session_service: InMemorySessionService
   ):
-    self.app_name = app_name
+    self.interviewer = random.choice(configs["voices"])
+    self.configs = configs
     self.session_id = session_id
-    self.interviewer_name = interviewer_name
-    self.voice = voice
 
     self.thought = ThoughtAgentSystem(session_service=session_service)
     self.live = None
 
-  async def start_session(self, resume: str, job_description: str) -> str:
+  async def start_thought_session(self, resume: str, job_description: str) -> str:
     """
     Prepare the interview round by checking the inputs and creating the background info.
     """
     interviewer_background = await prepare_interview(
-      app_name=self.app_name,
+      app_name=self.configs["name"],
       session_id=self.session_id,
-      interviewer_name=self.interviewer_name,
+      interviewer_name=self.interviewer["name"],
       resume=resume,
       job_description=job_description,
       session_service=self.thought.session_service,
     )
 
     await self.thought.start_session(
-      app_name=self.app_name,
+      app_name=self.configs["name"],
       session_id=self.session_id,
-      interviewer_name=self.interviewer_name,
+      interviewer_name=self.interviewer["name"],
       resume=resume,
       job_description=job_description,
       interviewer_background=interviewer_background,
     )
 
-  async def connect(self):
+  async def start_live_session(self):
     """
     Initialize the live agent system.
     """
     self.live = LiveAgentSystem(
-      app_name=self.app_name,
+      app_name=self.configs["name"],
       session_id=self.session_id,
       get_instructions=self.thought.get_instructions,
     )
     await self.live.start_session(
       session_id=self.session_id, 
-      interviewer_name=self.interviewer_name,
-      voice=self.voice,
+      interviewer_name=self.interviewer["name"],
+      voice=self.interviewer["voice"],
       background=self.thought.get_state()["interviewer_background"],
     )
 
@@ -93,59 +90,40 @@ class InterviewRound:
     if self.live:
       self.live.close()
 
-  # async def process_live_response
-
-
   async def run(self, websocket: WebSocket) -> None:
-    await websocket.accept()
+    try:
+      await websocket.accept()
 
-    # Start tasks
-    receive_and_process_responses_task = asyncio.create_task(
-      socket.receive_and_process_responses(websocket, self.live.live_events)
-    )
-    client_to_agent_task = asyncio.create_task(socket.client_to_agent_messaging(
-      websocket, 
-      self.live.live_request_queue, 
-      self.live.audio_queue
-    ))
-    process_and_send_audio_task = asyncio.create_task(
-      socket.process_and_send_audio(self.live_request_queue, self.audio_queue)
-    )
-
-    broadcast_state_task = asyncio.create_task(
-      self.broadcast_state(websocket)
-    )
-    # Wait until the websocket is disconnected or an error occurs
-    tasks = [
-      client_to_agent_task, 
-      process_and_send_audio_task, 
-      receive_and_process_responses_task,
-      broadcast_state_task,
-    ]
-    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
-
-    # Cancel any pending tasks immediately
-    for task in pending:
-      task.cancel()
-      try:
-        await task
-      except asyncio.CancelledError:
-        logging.info(f"✅ Cancelled task: {task.get_coro().__name__}")
-
-    # Handle exceptions and cancellations for completed tasks
-    for task in done:
-      if task.cancelled():
-        logging.info(f"⚠️ Task {task.get_coro().__name__} was cancelled")
-      elif task.exception():
-        exc = task.exception()
-        errorCode = exc.code
-        if errorCode == 1000:
-          logging.info(f"✅ Session ended by user: {task.get_coro().__name__}")
-        else:
-          logging.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
-          tb = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-          logging.error(tb)
-          raise exc
-
-
+      async with asyncio.TaskGroup() as tg:
+        handle_live_events_task = tg.create_task(
+          socket.handle_live_events(
+            self.live.live_events, 
+            websocket, 
+            self.thought.put_client_message, 
+            self.thought.put_agent_message
+          )
+        )
+        handle_inbound_messages_task = tg.create_task(
+          socket.handle_inbound_messages(websocket, self.live.live_request_queue)
+        )
+        update_thought_task = tg.create_task(self._update_thought())
+      
+    except WebSocketDisconnect as e:
+      logging.info(f"⚠️ WebSocket disconnected before tasks started for session {self.session_id}")
+      raise e
+    except Exception as e:
+      logging.error(f"⚠️ Unhandled error in run: {e}")
+      logging.error(traceback.format_exc())
+      raise e
+    
+  async def _update_thought(self) -> None:
+    """
+    Update the thought agent with new messages.
+    """
+    REFRESH_INTERVAL = self.configs["refresh_interval"] ### TODO: add configs
+    while True:
+      await asyncio.sleep(REFRESH_INTERVAL)
+      await self.thought.update()
+      await self.run("system", "State updated")
+      # TODO: push system message into the request queue
 
