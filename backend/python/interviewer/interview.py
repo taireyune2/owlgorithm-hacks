@@ -181,7 +181,7 @@ class InterviewRound:
     Run the interview round with the given WebSocket connection.
     """
     await websocket.accept()
-
+    consecutiveIdleCountAllowed = 3
     # Start tasks
     receive_and_process_responses_task = asyncio.create_task(
       socket.receive_and_process_responses(websocket, self.live_events)
@@ -201,7 +201,6 @@ class InterviewRound:
     # Wait until the websocket is disconnected or an error occurs
     tasks = [
       client_to_agent_task, 
-      process_and_send_audio_task, 
       receive_and_process_responses_task,
       # broadcast_state_task,
     ]
@@ -221,8 +220,7 @@ class InterviewRound:
         logging.info(f"⚠️ Task {task.get_coro().__name__} was cancelled")
       elif task.exception():
         exc = task.exception()
-        errorCode = exc.code
-        if errorCode == 1000:
+        if hasattr(exc, "code") and exc.code == 1000:
           logging.info(f"✅ Session ended by user: {task.get_coro().__name__}")
         else:
           logging.error(f"❌ Unhandled exception in task {task.get_coro().__name__}: {exc}")
