@@ -4,7 +4,12 @@ logger.setup(configs.file["logging"])
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
 import os
 import uvicorn
 import logging
@@ -28,6 +33,22 @@ app.add_middleware(
   allow_methods=["*"],  # Allow all methods or specify particular methods ["GET", "POST"]
   allow_headers=["*"],  # Allow all headers or specify ["Content-Type", "Authorization"]
 )
+
+# Set limiter into app state here
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+  return JSONResponse(
+      status_code=429,
+      content={
+          "status": "failure",
+          "message": "Too many requests! Please try again later."
+      }
+  )
+
 
 if api_configs["dev"]:
   STATIC_DIR = Path(__file__).parent / "static"
