@@ -16,6 +16,7 @@ export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
   const [uploadFailed, setUploadFailed] = useState("");
+  const [signal, setSignal] = useState("");
   const [wsStatus, setWsStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
@@ -39,8 +40,6 @@ export const WebSocketAudio = () => {
   useEffect(() => {
     setWsStatus(wsStatus);
   }, []);
-
-  console.log("session id", sessionIdStarted);
 
   const base64ToArray = (base64: string): ArrayBuffer => {
     const binaryString = window.atob(base64);
@@ -68,7 +67,6 @@ export const WebSocketAudio = () => {
       const ws = new WebSocket(`${wsUrlRef.current}?is_audio=true`);
 
       ws.onopen = () => {
-        console.log("WebSocket connection opened.");
         setMessages([{ id: "status", text: "Connection opened" }]);
         resolve(ws);
       };
@@ -76,9 +74,8 @@ export const WebSocketAudio = () => {
       ws.onmessage = (event) => {
         const message_from_server = JSON.parse(event.data);
         console.log("taravat", message_from_server.signal);
+        setSignal(message_from_server.signal);
         setWsStatus(message_from_server.status);
-        console.log("[AGENT TO CLIENT]", message_from_server);
-        console.log("[RAW MESSAGE]", event.data);
 
         if (message_from_server.turn_complete) {
           currentMessageIdRef.current = null;
@@ -112,6 +109,12 @@ export const WebSocketAudio = () => {
                 : msg
             )
           );
+
+          // Add breakline if this is the "Response completed by Gemini" message
+          if (message_from_server.signal === "turn_complete") {
+            setMessages((prev) => [...prev, { id: "newline", text: "\n" }]);
+            currentMessageIdRef.current = null;
+          }
 
           setTimeout(() => {
             messagesDivRef.current?.scrollTo({
@@ -166,12 +169,11 @@ export const WebSocketAudio = () => {
         },
         body: JSON.stringify(payload),
       });
-      console.log("Upload response:", response);
 
       if (!response.ok) {
         setIsRecording(false);
         const errorData = await response.json();
-        console.error("Error details:", errorData.detail);
+
         setUploadFailed(
           `Upload Failed, please ensure valid job description or resume has been uploaded`
         );
@@ -184,7 +186,6 @@ export const WebSocketAudio = () => {
 
       const [playerNode] = await startAudioPlayerWorklet((speaking) => {
         setIsSpeaking(speaking);
-        console.log("Audio player speaking state:", speaking);
       });
       audioPlayerNodeRef.current = playerNode;
 
@@ -197,7 +198,6 @@ export const WebSocketAudio = () => {
           });
           ws.send(messageJson);
           setMicStatus("");
-          console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
         }
       });
     } catch (error) {
@@ -261,9 +261,13 @@ export const WebSocketAudio = () => {
       >
         <div>
           {messages.map((msg) => (
-            <p key={msg.id} className="mb-1">
-              {msg.text}
-            </p>
+            <div key={msg.id} className="mb-1">
+              {msg.id === "newline" ? (
+                <div className="h-6 bg-slate-100"></div>
+              ) : (
+                <p>{msg.text}</p>
+              )}
+            </div>
           ))}
         </div>
       </div>
