@@ -168,6 +168,8 @@ export const WebSocketAudio = () => {
           `Upload Failed, please ensure valid job description or resume has been uploaded`
         );
         throw new Error("Failed to upload resume data");
+      } else {
+        setUploadFailed("");
       }
 
       const ws = await connectWebsocket();
@@ -186,11 +188,11 @@ export const WebSocketAudio = () => {
             data: arrayBufferToBase64(pcmData),
           });
           ws.send(messageJson);
+          setMicStatus("");
           console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
         }
       });
     } catch (error) {
-      console.error("Failed to start audio session:", error);
       setMicStatus("Socket connection failed, please try again");
       setIsRecording(false);
     }
@@ -199,10 +201,11 @@ export const WebSocketAudio = () => {
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
-      setMicStatus("Click the icon to start recording");
       if (websocket) {
         websocket.close(1000, "Session ended by user");
         setWebsocket(null);
+        setWsStatus("close");
+        setIsRecording(false);
       }
     }
   };
