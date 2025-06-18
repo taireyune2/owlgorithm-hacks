@@ -5,7 +5,7 @@ import { useReactiveVar } from "@apollo/client";
 import { uploadResumeRawTextDataVar } from "./UploadResume";
 import { JobDescriptionVar } from "./JobDescriptionInput";
 import { InterviewerMascot } from "./InterviewerMascot";
-import { Button } from "@mui/material";
+import { Alert, Button } from "@mui/material";
 
 interface Message {
   id: string;
@@ -15,6 +15,7 @@ interface Message {
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
+  const [uploadFailed, setUploadFailed] = useState("");
   const [wsStatus, setWsStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
@@ -127,7 +128,10 @@ export const WebSocketAudio = () => {
 
       ws.onclose = () => {
         console.log("WebSocket connection closed.");
-        setMessages([{ id: "status", text: "Connection closed" }]);
+        setMessages((prev) => [
+          ...prev,
+          { id: "status", text: "Connection closed" },
+        ]);
       };
 
       setWebsocket(ws); // set to React state
@@ -136,6 +140,11 @@ export const WebSocketAudio = () => {
 
   const handleStartAudio = async () => {
     if (isRecording) return;
+
+    // Clear previous messages and reset state for new session
+    setMessages([]);
+    currentMessageIdRef.current = null;
+
     setIsRecording(true);
     const payload = {
       resume: {
@@ -157,9 +166,18 @@ export const WebSocketAudio = () => {
         },
         body: JSON.stringify(payload),
       });
+      console.log("Upload response:", response);
+
       if (!response.ok) {
         setIsRecording(false);
+        const errorData = await response.json();
+        console.error("Error details:", errorData.detail);
+        setUploadFailed(
+          `Upload Failed, please ensure valid job description or resume has been uploaded`
+        );
         throw new Error("Failed to upload resume data");
+      } else {
+        setUploadFailed("");
       }
 
       const ws = await connectWebsocket();
@@ -178,12 +196,12 @@ export const WebSocketAudio = () => {
             data: arrayBufferToBase64(pcmData),
           });
           ws.send(messageJson);
+          setMicStatus("");
           console.log("[CLIENT TO AGENT] sent %s bytes", pcmData.byteLength);
         }
       });
     } catch (error) {
-      console.error("Failed to start audio session:", error);
-      setMicStatus("Mic/websocket error");
+      setMicStatus("Socket connection failed, please try again");
       setIsRecording(false);
     }
   };
@@ -191,11 +209,16 @@ export const WebSocketAudio = () => {
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
-      setMicStatus("Click the icon to start recording");
       if (websocket) {
         websocket.close(1000, "Session ended by user");
         setWebsocket(null);
+        setWsStatus("close");
       }
+      // Reset audio nodes
+      if (audioPlayerNodeRef.current) {
+        audioPlayerNodeRef.current = null;
+      }
+      setIsSpeaking(false);
     }
   };
 
@@ -227,8 +250,8 @@ export const WebSocketAudio = () => {
           End
         </Button>
       </div>
-
-      <div className="text-sm font-medium text-gray-600 mb-2">{micStatus}</div>
+      {uploadFailed && <Alert severity="error">{uploadFailed}</Alert>}
+      {micStatus && <Alert severity="warning">{micStatus}</Alert>}
       <div className="sticky top-20z-10 flex justify-center mb-4">
         <InterviewerMascot speaking={isSpeaking} />
       </div>
