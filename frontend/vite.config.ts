@@ -9,6 +9,11 @@ export default defineConfig({
   ssr: {
     noExternal: ["@apollo/client"],
   },
+  define: {
+    // Make environment variables available to client-side code
+    "process.env.VITE_BACKEND_API_URL": JSON.stringify(process.env.VITE_BACKEND_API_URL || "http://localhost:8000"),
+    "process.env.VITE_WEBSOCKET_URL": JSON.stringify(process.env.VITE_WEBSOCKET_URL || "ws://localhost:8000"),
+  },
   plugins: [
     remix({
       future: {

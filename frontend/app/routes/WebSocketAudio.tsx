@@ -12,6 +12,15 @@ interface Message {
   text: string;
 }
 
+// Get environment variables with fallbacks
+const getBackendUrl = () => {
+  return process.env.VITE_BACKEND_API_URL;
+};
+
+const getWebSocketUrl = () => {
+  return process.env.VITE_WEBSOCKET_URL;
+};
+
 export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
@@ -33,7 +42,9 @@ export const WebSocketAudio = () => {
     if (typeof window !== "undefined") {
       const sessionId = Math.random().toString().substring(10);
       setSessionIdStarted(sessionId);
-      wsUrlRef.current = `ws://localhost:8000/ws/${sessionId}`;
+      // Use environment variable for WebSocket URL
+      const baseWsUrl = getWebSocketUrl();
+      wsUrlRef.current = `${baseWsUrl}/ws/${sessionId}`;
     }
   }, []);
 
@@ -162,7 +173,9 @@ export const WebSocketAudio = () => {
       session_id: sessionIdStarted,
     };
     try {
-      const response = await fetch(`http://localhost:8000/upload`, {
+      // Use environment variable for API URL
+      const backendUrl = getBackendUrl();
+      const response = await fetch(`${backendUrl}/upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
