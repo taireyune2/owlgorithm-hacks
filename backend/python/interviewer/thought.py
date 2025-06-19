@@ -9,6 +9,7 @@ from google.adk.events import Event, EventActions
 from google.genai import types
 
 from .agent import root_agent
+from .subagents.greeter import interviewer_instruction
 
 ############################ Run ######################################
 class ThoughtQueue:
@@ -83,7 +84,7 @@ class ThoughtAgentSystem:
         "job_description": job_description,
         "interviewer_background": interviewer_background,
         "phase": "greeting",
-        "interview_instructions": "",
+        "interview_instructions": interviewer_instruction,
         "immediate_agent_text": "",
         "immediate_client_text": "",
         "phase_agent_text": "",
@@ -143,7 +144,9 @@ class ThoughtAgentSystem:
     Returns:
       str: Instructions for the interviewer.
     """
-    return self.session.state.get("interview_instructions", "")
+    logging.info(f"Calling get_instructions from {self.session.state['phase']}")
+    logging.info(f"Interview instructions:\n{self.session.state['interview_instructions']}")
+    return self.session.state["interview_instructions"]
   
   def get_state(self) -> dict:
     """

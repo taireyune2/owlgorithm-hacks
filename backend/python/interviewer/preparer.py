@@ -11,7 +11,9 @@ from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
 from google.genai import types
 
+from common.configs import file
 
+configs = file["agent"]["preparer"]
 
 ###################### Resume ###############################
 class ResumeJudgement(BaseModel):
@@ -40,14 +42,17 @@ Respond ONLY in valid JSON format following this schema:
 
 resume_judge = LlmAgent(
   name="resume_judge",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to judge whether the input text is a resume or not.",
   instruction=_instruction,
   output_key="resume_judgement",
   output_schema=ResumeJudgement,
   include_contents='none',
   disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True
+  disallow_transfer_to_peers=True,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=0.0
+  ),
 )
 
 ######################### Job Description ###############################
@@ -77,14 +82,17 @@ Respond ONLY in valid JSON format following this schema:
 
 job_description_judge = LlmAgent(
   name="job_description_judge",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to judge whether the input text is a job description or not.",
   instruction=_instruction,
   output_key="job_description_judgement",
   output_schema=JobDescriptionJudgement,
   include_contents='none',
   disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True
+  disallow_transfer_to_peers=True,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=0.0
+  ),
 )
 
 
@@ -110,14 +118,14 @@ def check_inputs_callback(callback_context: CallbackContext) -> Optional[types.C
   return types.Content(role="agent", parts=[types.Part(text=error_message)])
 
 
-_instruction = """You are a person who is hiring. Your name is {interviewer_name}.
+_instruction = """You are a person who is hiring.
 
 You need to give a background about yourself to the candidate.
 This is the job description you wrote:
 
 {job_description}
 
-Please give a brief background of yourself. 
+Please write a brief background of yourself. 
 This description should be clear and concise, befitting the PERSON WHO IS HIRING.
 The description should be no more than 50 words. Please use fictional information where ever needed.
 Respond only with your background. No need to greet.
@@ -125,14 +133,18 @@ Respond only with your background. No need to greet.
 
 interviewer_agent = LlmAgent(
   name="self_introduction_agent",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to provide background information about the interviewer.",
   instruction=_instruction,
   include_contents='none',
   disallow_transfer_to_parent=True,
   disallow_transfer_to_peers=True,
   before_agent_callback=[check_inputs_callback],
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0,
+  ),
 )
+
 
 ################################# Control Flow ####################################
 

@@ -123,6 +123,6 @@ class InterviewRound:
     while True:
       await asyncio.sleep(REFRESH_INTERVAL)
       await self.thought.update()
-      await self.thought.run("system", "State updated")
+      await self.thought.run()
       # TODO: push system message into the request queue
 
