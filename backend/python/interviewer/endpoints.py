@@ -75,6 +75,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     logging.error(f"Error in WebSocket connection for session {session_id}: {e}")
     logging.error(traceback.format_exc())
   finally:
-    manager.disconnect(session_id)
-    logging.info(f"Interview {session_id} has been cleaned up.")
+    await manager.disconnect(session_id)
+  logging.info(f"Interview {session_id} has been cleaned up.")
 

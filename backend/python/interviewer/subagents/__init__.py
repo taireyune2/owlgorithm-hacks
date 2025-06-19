@@ -1,1 +1,3 @@
-from . import agent
+from common.configs import file
+
+configs = file["agent"]["thought"]

@@ -69,26 +69,25 @@ class InterviewRound:
     """
     Initialize the live agent system.
     """
-    self.live = LiveAgentSystem(
-      app_name=self.configs["name"],
-      session_id=self.session_id,
-      get_instructions=self.thought.get_instructions,
-    )
+    self.live = LiveAgentSystem()
     await self.live.start_session(
+      app_name=self.configs["name"],
       session_id=self.session_id, 
       interviewer_name=self.interviewer["name"],
       voice=self.interviewer["voice"],
       background=self.thought.get_state()["interviewer_background"],
+      model=self.configs["live"]["model"],
+      get_instructions=self.thought.get_instructions,
     )
 
-  def close(self):
+  async def close(self):
     """
     Close the interview round and clean up resources.
     """
     if self.thought:
-      self.thought.close()
+      await self.thought.close()
     if self.live:
-      self.live.close()
+      await self.live.close()
 
   async def run(self, websocket: WebSocket) -> None:
     try:
@@ -120,10 +119,10 @@ class InterviewRound:
     """
     Update the thought agent with new messages.
     """
-    REFRESH_INTERVAL = self.configs["refresh_interval"] ### TODO: add configs
+    REFRESH_INTERVAL = self.configs["refresh_interval"]
     while True:
       await asyncio.sleep(REFRESH_INTERVAL)
       await self.thought.update()
-      await self.run("system", "State updated")
+      await self.thought.run("system", "State updated")
       # TODO: push system message into the request queue
 
