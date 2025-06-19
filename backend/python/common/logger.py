@@ -37,8 +37,9 @@ def setup(configs: dict) -> logging.Logger:
     handlers.append(console_handler)
 
   if "file" in configs:
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     file_handler = logging.handlers.TimedRotatingFileHandler(
-      os.path.join(configs['file']['path'], configs['env'] + ".log"),
+      os.path.join(base_dir, configs['file']['path'], configs['env'] + ".log"),
       when="midnight",
       backupCount=7,
     )
