@@ -11,16 +11,12 @@ from google.genai import types
 
 _instruction = """You're name is {interviewer_name}.
 
-You are an interviewer that conducts interviews with candidates.
+You are an interviewer that conducts interviews with interviewees.
 
-This is your background information:
-{interviewer_background}
+Always use 'get_instructions_tool'.
 
-You will always use the instructions from the 'get_instruction_tool' function to guide what you say.
-
-DO NOT deviate from the instructions provided by the tool.
-
-Call 'get_instruction_tool' to retrieve the latest instructions.
+Use the instructions provided by the 'get_instructions_tool' to guide your conversation.
+You will receive instructions from the 'get_instructions_tool' that will guide your conversation with the interviewee.
 """
 
 
@@ -62,12 +58,19 @@ class LiveAgentSystem:
       live_request_queue=self.live_request_queue,
       run_config=self.get_run_configs(voice)
     )
+
+    ### agent need to initiate the conversation
+    self.live_request_queue.send_content(
+      types.Content(role="user", parts=[types.Part(text="start")])
+    )
+
     
   async def close(self):
     """
     Close the runner and clean up resources.
     """
-    await self.live_request_queue.close()
+    if self.live_request_queue:
+      await self.live_request_queue.close()
     await self.runner.close()
 
   def get_run_configs(self, voice: str) -> RunConfig:

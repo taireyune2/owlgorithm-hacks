@@ -1,63 +1,53 @@
 from google.adk.agents import LlmAgent, ParallelAgent
-from google.adk.agents.callback_context import CallbackContext
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
 from typing import AsyncGenerator, Optional
 
+import logging
 from . import configs
+from .introducer import interviewer_instruction as next_instruction
 
 interviewer_instruction = """It is currently the greeting phase of the interview.
-
 You are responsible for the initial greeting during this interview.
-
-Please initiate a polite greet. If the interviewee did not respond, please greet them again.
-
+Initiate a simple hi or hello. 
+If the interviewee responds with a greet, followup with a more formal greet. 
 For example, you can ask them how their day is going or how their week has been. Keep it professional.
 """
 
-# # If you and the interviewee has already greeted, use the 'next_step_tool' call to proceed to the next phase.
-# def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
-#   """
-  
-#   """
-#   callback_context.state["interview_instructions"] = interviewer_instruction.format(
-#     interviewer_name=callback_context.state["interviewer_name"]
-#   )
-
-
-def next_step(tool_context: ToolContext) -> None:
+def step_complete(tool_context: ToolContext) -> None:
   """
   Progress the conversation to the introduction phase.
   """
+  logging.info("Progressing to the introduction phase.")
   if tool_context.state["phase"] == "greeting":
     tool_context.state["phase"] = "introduction"
-    tool_context.actions.transfer_to_agent = "introducer"
+    tool_context.state["interview_instructions"] = next_instruction.format(
+      interviewer_background=tool_context.state["interviewer_background"]
+    )
+    tool_context.actions.transfer_to_agent = "introduction_judge"
 
-next_step_tool = FunctionTool(func=next_step)
+step_complete_tool = FunctionTool(func=step_complete)
 
 _instruction = """You are a content judge.
-
 You are responsible for determining whether the interviewer and interviewee have both greeted each other.
-
 Here is the conversation:
 
-[start_interviewer]
+interviewer:
 {phase_agent_text}
-[end_interviewer]
 
-[start_interviewee]
+interviewee:
 {phase_client_text}
-[end_interviewee]
 
-If they have both greeted each other, you will call the 'next_step_tool' to progress the conversation.
+Tool use 'step_complete_tool': call the 'step_complete_tool' if the interviewer and interviewee have both greeted each other
 """
 
 agent = LlmAgent(
-  name="greeter",
-  description="Handles the initial greeting phase of the interview conversation.",
-  model=configs.get("model", "gemini-2.0-flash"),
+  name="greeting_judge",
+  description="Determine whether the interviewee has greeted",
+  model=configs["model"],
   instruction=_instruction,
-  tools=[next_step_tool,], 
+  tools=[step_complete_tool,], 
+  include_contents='none',
   # before_agent_callback=[before_agent_callback,],
   generate_content_config=types.GenerateContentConfig(
     temperature=0.0
