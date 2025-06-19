@@ -20,6 +20,13 @@
       {"name": "Emma", "voice": "Leda"},
       {"name": "Alex", "voice": "Orus"},
       {"name": "Tim", "voice": "Charon"}
-    ]
+    ],
+    "refresh_interval": 5.0,
+    "live": {
+      "model": "gemini-2.0-flash-exp"
+    },
+    "thought": {
+      "model": "gemini-2.0-flash"
+    }
   }
 }

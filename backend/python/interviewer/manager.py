@@ -42,20 +42,20 @@ class InterviewManager:
     Check if Interview Round is ready. Once ready, accept websocket connection.
     """
     interview_round = self.interviews.get(session_id, None)
-    if not interview_round:
-      if tries > 0:
-        logging.info(f"Interview Round {session_id} is not ready. Retrying in 1 second with {tries} retries...")
-        await asyncio.sleep(1)
-        return await self.connect(websocket, session_id, tries - 1)
-      else:
-        logging.error(f"Interview Round {session_id} is not ready after retries. Disconnecting.")
-        self.disconnect(session_id)
-        raise Exception(f"Interview Round {session_id} is not ready after retries.")
-    
-    await interview_round.run(websocket)
+    if interview_round:
+      await interview_round.start_live_session()
+      await interview_round.run(websocket)
+    elif tries > 0:
+      logging.info(f"Interview Round {session_id} is not ready. Retrying in 1 second with {tries} retries...")
+      await asyncio.sleep(1)
+      return await self.connect(websocket, session_id, tries - 1)
+    else:
+      logging.error(f"Interview Round {session_id} is not ready after retries. Disconnecting.")
+      await self.disconnect(session_id)
+      raise Exception(f"Interview Round {session_id} is not ready after retries.")
 
-  def disconnect(self, session_id: str):
+  async def disconnect(self, session_id: str):
     interview_round = self.interviews.get(session_id, None)
     if interview_round:
-      interview_round.close()
+      await interview_round.close()
       del self.interviews[interview_round.session_id]

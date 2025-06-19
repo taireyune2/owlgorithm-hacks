@@ -201,5 +201,7 @@ async def prepare_interview(
     raise ValueError(results[-1])
   
   await runner.close()
-  await session_service.delete_session(session_id)
+  await session_service.delete_session(
+    app_name=app_name, user_id=session_id, session_id=session_id
+  )
   return results[-1]

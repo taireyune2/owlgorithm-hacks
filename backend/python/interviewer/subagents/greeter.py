@@ -1,6 +1,29 @@
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, ParallelAgent
+from google.adk.agents.callback_context import CallbackContext
 from google.adk.tools import ToolContext, FunctionTool
 from google.genai import types
+from typing import AsyncGenerator, Optional
+
+from . import configs
+
+interviewer_instruction = """It is currently the greeting phase of the interview.
+
+You are responsible for the initial greeting during this interview.
+
+Please initiate a polite greet. If the interviewee did not respond, please greet them again.
+
+For example, you can ask them how their day is going or how their week has been. Keep it professional.
+"""
+
+# # If you and the interviewee has already greeted, use the 'next_step_tool' call to proceed to the next phase.
+# def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
+#   """
+  
+#   """
+#   callback_context.state["interview_instructions"] = interviewer_instruction.format(
+#     interviewer_name=callback_context.state["interviewer_name"]
+#   )
+
 
 def next_step(tool_context: ToolContext) -> None:
   """
@@ -12,24 +35,31 @@ def next_step(tool_context: ToolContext) -> None:
 
 next_step_tool = FunctionTool(func=next_step)
 
-_instruction = """You are an interviewer named.
+_instruction = """You are a content judge.
 
-You are responsible for the initial greeting during this interview.
+You are responsible for determining whether the interviewer and interviewee have both greeted each other.
 
-Please initiate a polite greet. If the interviewee did not respond, please greet them again.
+Here is the conversation:
 
-You can ask them how their day is going. Keep it professional.
+[start_interviewer]
+{phase_agent_text}
+[end_interviewer]
 
-If you and the interviewee has already greeted, use the 'next_step_tool' call to proceed to the next phase.
+[start_interviewee]
+{phase_client_text}
+[end_interviewee]
+
+If they have both greeted each other, you will call the 'next_step_tool' to progress the conversation.
 """
 
 agent = LlmAgent(
   name="greeter",
   description="Handles the initial greeting phase of the interview conversation.",
-  model="gemini-2.0-flash-exp",
+  model=configs.get("model", "gemini-2.0-flash"),
   instruction=_instruction,
-  tools=[next_step_tool], 
+  tools=[next_step_tool,], 
+  # before_agent_callback=[before_agent_callback,],
   generate_content_config=types.GenerateContentConfig(
-    temperature=2.0
+    temperature=0.0
   ),
 )

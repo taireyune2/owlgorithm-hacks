@@ -82,6 +82,7 @@ class ThoughtAgentSystem:
         "resume": resume,
         "job_description": job_description,
         "interviewer_background": interviewer_background,
+        "phase": "greeting",
         "interview_instructions": "",
         "immediate_agent_text": "",
         "immediate_client_text": "",
@@ -95,10 +96,14 @@ class ThoughtAgentSystem:
     """
     Close the session.
     """
-    await self.session_service.delete_session(self.session.id)
+    await self.session_service.delete_session(
+      app_name=self.session.app_name,
+      user_id=self.session_id,
+      session_id=self.session_id
+    )
     await self.runner.close()
 
-  async def run(self, role, message):
+  async def run(self):
     """
     Run the agent with the given message.
     """
@@ -106,8 +111,8 @@ class ThoughtAgentSystem:
       user_id=self.session.id,
       session_id=self.session.id,
       new_message=types.Content(
-        role=role,
-        parts=[types.Part(text=message)]
+        role="user",
+        parts=[types.Part(text="")]
       )
     ):
       continue
