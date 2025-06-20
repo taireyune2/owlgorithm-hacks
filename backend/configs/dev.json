@@ -34,6 +34,13 @@
     },
     "preparer": {
       "model": "gemini-2.0-flash"
-    }
+    },
+    "interview_questions": [
+      "Describe a situation where you disagreed with a team member. How did you handle it?",
+      "Describe a time you got feedback that was hard to hear. How did you handle it?",
+      "Give an example of a time you took initiative outside your job scope.",
+      "Tell me about a time you had to make a difficult decision with limited data."
+    ],
+    "num_questions": 2
   }
 }
