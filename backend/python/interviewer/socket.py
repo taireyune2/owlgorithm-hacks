@@ -21,7 +21,7 @@ async def handle_live_events(
   live_events: AsyncGenerator[Event, None],
   websocket: WebSocket, 
   collect_client_txt: Callable[[str], Awaitable[None]],
-  collection_agent_txt: Callable[[str], Awaitable[None]],
+  collect_agent_txt: Callable[[str], Awaitable[None]],
 ) -> None:
   """
   Handle the live agent's output events.
@@ -35,6 +35,9 @@ async def handle_live_events(
         "turn_complete": event.turn_complete,
         "interrupted": event.interrupted,
       }
+      flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+      await collect_client_txt(flag)
+      await collect_agent_txt(flag)
       await websocket.send_text(json.dumps(message))
       # logging.info(f"[AGENT TO CLIENT]: {message}")
       continue
@@ -74,7 +77,7 @@ async def handle_live_events(
           "data": part.text
         }
         await websocket.send_text(json.dumps(message))
-        await collection_agent_txt(part.text)
+        await collect_agent_txt(part.text)
         # logging.info(f"[AGENT TO CLIENT]: text/plain: {message}")
 
   # except WebSocketDisconnect as e:

@@ -70,12 +70,13 @@ class InterviewRound:
     Initialize the live agent system.
     """
     self.live = LiveAgentSystem()
+    state = await self.thought.get_state()
     await self.live.start_session(
       app_name=self.configs["name"],
       session_id=self.session_id, 
       interviewer_name=self.interviewer["name"],
       voice=self.interviewer["voice"],
-      background=self.thought.get_state()["interviewer_background"],
+      background=[state["interviewer_background"]],
       model=self.configs["live"]["model"],
       get_instructions=self.thought.get_instructions,
     )
