@@ -7,14 +7,19 @@ import logging
 from . import configs
 from .introducer import interviewer_instruction as next_instruction
 
+############################# live agent instruction #########################
 interviewer_instruction = """It is currently the initial phase of the interview.
 You are responsible for the opening conversation, the greeting exchange during this interview.
 
 Start with a simple hi or hello. 
-If the interviewee responds, continue the greeting exchange.
-For example, you can ask them how their day is going or how their week has been. Keep it professional.
+If the interviewee responds, continue the greeting exchange. Make small talk to make the interviewee feel comfortable and relaxed.
+You can ask them about their day, week, or any other light topic to break the ice.
+Do not ask any questions related to the interview or the job at this stage.
+Make sure to keep the conversation light and friendly, but also professional.
+Do not ask any questions related to the interview or the job at this stage.
 """
 
+######################### thought agent ###############################
 def step_complete(tool_context: ToolContext) -> None:
   """
   Progress the conversation to the introduction phase.
@@ -34,7 +39,7 @@ interviewer:
 interviewee:
 {phase_client_text}
 
-Tool use 'step_complete_tool': call the 'step_complete_tool' if the interviewer and interviewee have both greeted each other
+Tool use 'step_complete_tool': call the 'step_complete_tool' if the interviewer and interviewee have both greeted each other or have started a small talk.
 """
 
 agent = LlmAgent(

@@ -25,15 +25,20 @@
     "live": {
       "model": "gemini-2.0-flash-exp"
     },
+
+    "preparer": {
+      "model": "gemini-2.0-flash"
+    },
     "thought": {
       "model": "gemini-2.5-flash",
       "durations": {
+        "greeting": 15,
         "introduction": 90,
-        "overview": 60
+        "overview": 30,
+        "behavioral": 90,
+        "followup": 60,
+        "closing": 30
       }
-    },
-    "preparer": {
-      "model": "gemini-2.0-flash"
     },
     "interview_questions": [
       "Describe a situation where you disagreed with a team member. How did you handle it?",
