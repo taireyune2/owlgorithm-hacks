@@ -64,6 +64,7 @@ class ThoughtAgentSystem:
     resume: str,
     job_description: str,
     interviewer_background: str,
+    interview_questions: list[str],
   ) -> Session:
     """
     Prepare session.
@@ -89,6 +90,9 @@ class ThoughtAgentSystem:
         "immediate_client_text": "",
         "phase_agent_text": "",
         "phase_client_text": "",
+        "phase_start": 0.0,
+        "interview_questions": interview_questions,
+        "question_index": 0,
       }
     )
     return self.session

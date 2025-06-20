@@ -63,6 +63,9 @@ class InterviewRound:
       resume=resume,
       job_description=job_description,
       interviewer_background=interviewer_background,
+      interview_questions=random.sample(
+        self.configs["interview_questions"], self.configs["num_questions"]
+      ),
     )
 
   async def start_live_session(self):
