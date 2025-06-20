@@ -49,15 +49,16 @@ class ThoughtAgentSystem:
   """
   Handles the lifecycle of the thought agent.
   """
-  def __init__(self, session_service: InMemorySessionService):
-    self.session_service = session_service
+  def __init__(self):
+    self.session_service: InMemorySessionService = None
     self.runner: Optional[Runner] = None
     self.session_id: Optional[str] = None
     self.session: Optional[Session] = None
     self.thought_queue = ThoughtQueue()
 
   async def start_session(
-    self, 
+    self, *,
+    session_service: InMemorySessionService,
     app_name: str,
     session_id: str, 
     interviewer_name: str,   
@@ -69,6 +70,7 @@ class ThoughtAgentSystem:
     """
     Prepare session.
     """
+    self.session_service = session_service
     self.session_id = session_id
     self.runner = Runner(
       app_name=app_name,
@@ -93,6 +95,8 @@ class ThoughtAgentSystem:
         "phase_start": 0.0,
         "interview_questions": interview_questions,
         "question_index": 0,
+        "question": "",
+        "followup_question": "",
       }
     )
     return self.session

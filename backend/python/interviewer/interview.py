@@ -34,16 +34,20 @@ class InterviewRound:
     self, 
     configs: dict,
     session_id: str, 
-    session_service: InMemorySessionService
+    
   ):
     self.interviewer = random.choice(configs["voices"])
     self.configs = configs
     self.session_id = session_id
-
-    self.thought = ThoughtAgentSystem(session_service=session_service)
+  
+    self.thought = None
     self.live = None
 
-  async def start_thought_session(self, resume: str, job_description: str) -> str:
+  async def start_thought_session(
+    self, *,
+    session_service: InMemorySessionService,
+    resume: str, job_description: str
+  ) -> None:
     """
     Prepare the interview round by checking the inputs and creating the background info.
     """
@@ -53,10 +57,11 @@ class InterviewRound:
       interviewer_name=self.interviewer["name"],
       resume=resume,
       job_description=job_description,
-      session_service=self.thought.session_service,
+      session_service=session_service,
     )
-
+    self.thought = ThoughtAgentSystem()
     await self.thought.start_session(
+      session_service=session_service,
       app_name=self.configs["name"],
       session_id=self.session_id,
       interviewer_name=self.interviewer["name"],

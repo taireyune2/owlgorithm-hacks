@@ -1,25 +1,37 @@
 from typing import Callable
 
 from google.adk.runners import InMemoryRunner
+from google.adk.sessions import InMemorySessionService, Session
 from google.adk.agents import LiveRequestQueue
 from google.adk.agents.run_config import RunConfig
-from google.adk.events import Event
+from google.adk.events import Event, EventActions
 from google.adk.agents import LlmAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
 
-_instruction = """You're name is {interviewer_name}.
+_instruction = """Use the instructions from 'get_instructions_tool' to conduct the interview. 
 
-You are an interviewer that conducts interviews with interviewees.
-
-Use the instructions from 'get_instructions_tool' to conduct the interview. 
-
-Do not deviate from the instructions provided by the 'get_instructions_tool'.
+Follow the instructions provided by the 'get_instructions_tool'.
 """
+# _instruction = """You're name is {interviewer_name}.
+
+# You are an interviewer that conducts interviews with interviewees.
+
+# Use the instructions from 'get_instructions_tool' to conduct the interview. 
+
+# DO NOT deviate from the instructions provided by the 'get_instructions_tool'.
+# """
 
 
 class LiveAgentSystem:
+  def __init__(self):
+    self.runner: InMemoryRunner = None
+    self.live_request_queue: LiveRequestQueue = None
+    self.session: Session = None
+    self.app_name = None
+    self.live_events = None
+
   async def start_session(
     self,
     app_name: str, 
@@ -60,10 +72,13 @@ class LiveAgentSystem:
 
     ### agent need to initiate the conversation
     self.live_request_queue.send_content(
-      types.Content(role="user", parts=[types.Part(text="Start cue")])
+      types.Content(
+        role="user", 
+        parts=[types.Part(text="Hi")],
+        # parts=[types.Part(text="[SYSTEM] Start by saying 'hi' or 'hello'.")],
+      )
     )
 
-    
   async def close(self):
     """
     Close the runner and clean up resources.
