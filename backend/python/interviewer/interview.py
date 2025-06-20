@@ -34,29 +34,38 @@ class InterviewRound:
     self, 
     configs: dict,
     session_id: str, 
-    session_service: InMemorySessionService
+    
   ):
     self.interviewer = random.choice(configs["voices"])
     self.configs = configs
     self.session_id = session_id
 
-    self.thought = ThoughtAgentSystem(session_service=session_service)
+    self.thought = None
     self.live = None
 
-  async def start_thought_session(self, resume: str, job_description: str) -> str:
+  async def start_thought_session(
+    self, 
+    *, session_service: InMemorySessionService,
+    resume: str,
+    job_description: str
+  ) -> None:
     """
     Prepare the interview round by checking the inputs and creating the background info.
     """
+    self.session_service = session_service
+
     interviewer_background = await prepare_interview(
       app_name=self.configs["name"],
       session_id=self.session_id,
       interviewer_name=self.interviewer["name"],
       resume=resume,
       job_description=job_description,
-      session_service=self.thought.session_service,
+      session_service=self.session_service,
     )
-
+    
+    self.thought = ThoughtAgentSystem()
     await self.thought.start_session(
+      session_service=self.session_service,
       app_name=self.configs["name"],
       session_id=self.session_id,
       interviewer_name=self.interviewer["name"],
@@ -79,7 +88,7 @@ class InterviewRound:
       session_id=self.session_id, 
       interviewer_name=self.interviewer["name"],
       voice=self.interviewer["voice"],
-      background=[state["interviewer_background"]],
+      background=state["interviewer_background"],
       model=self.configs["live"]["model"],
       get_instructions=self.thought.get_instructions,
     )
@@ -109,7 +118,7 @@ class InterviewRound:
         handle_inbound_messages_task = tg.create_task(
           socket.handle_inbound_messages(websocket, self.live.live_request_queue)
         )
-        update_thought_task = tg.create_task(self._update_thought())
+        update_thought_task = tg.create_task(self._update_state())
       
     except WebSocketDisconnect as e:
       logging.info(f"⚠️ WebSocket disconnected before tasks started for session {self.session_id}")
@@ -119,7 +128,7 @@ class InterviewRound:
       logging.error(traceback.format_exc())
       raise e
     
-  async def _update_thought(self) -> None:
+  async def _update_state(self) -> None:
     """
     Update the thought agent with new messages.
     """
@@ -128,5 +137,8 @@ class InterviewRound:
       await asyncio.sleep(REFRESH_INTERVAL)
       await self.thought.update()
       await self.thought.run()
+      state = await self.thought.get_state()
+      await self.live.update(phase=state["phase"], question=state["question"])
+      await self.live.get_state()
       # TODO: push system message into the request queue
 

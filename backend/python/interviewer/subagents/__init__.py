@@ -1,3 +1,3 @@
 from common.configs import file
 
-configs = file["agent"]["thought"]
+configs = file["agent"]

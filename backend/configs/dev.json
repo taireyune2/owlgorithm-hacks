@@ -26,11 +26,7 @@
       "model": "gemini-2.0-flash-exp"
     },
     "thought": {
-      "model": "gemini-2.5-flash",
-      "durations": {
-        "introduction": 90,
-        "overview": 60
-      }
+      "model": "gemini-2.5-flash"
     },
     "preparer": {
       "model": "gemini-2.0-flash"
@@ -41,6 +37,10 @@
       "Give an example of a time you took initiative outside your job scope.",
       "Tell me about a time you had to make a difficult decision with limited data."
     ],
-    "num_questions": 2
+    "num_questions": 2,
+    "durations": {
+      "introduction": 90,
+      "overview": 60
+    }
   }
 }

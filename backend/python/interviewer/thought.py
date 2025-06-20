@@ -1,6 +1,5 @@
-import logging
-from typing_extensions import override
 from typing import AsyncGenerator, Optional
+import logging
 import asyncio
 
 from google.adk.sessions import InMemorySessionService, Session
@@ -8,8 +7,7 @@ from google.adk.runners import Runner
 from google.adk.events import Event, EventActions
 from google.genai import types
 
-from .agent import root_agent
-from .subagents.greeter import interviewer_instruction
+from .agent import thought_agent
 
 ############################ Run ######################################
 class ThoughtQueue:
@@ -49,8 +47,8 @@ class ThoughtAgentSystem:
   """
   Handles the lifecycle of the thought agent.
   """
-  def __init__(self, session_service: InMemorySessionService):
-    self.session_service = session_service
+  def __init__(self):
+    self.session_service: Optional[InMemorySessionService] = None
     self.runner: Optional[Runner] = None
     self.session_id: Optional[str] = None
     self.session: Optional[Session] = None
@@ -58,8 +56,9 @@ class ThoughtAgentSystem:
 
   async def start_session(
     self, 
+    *, session_service: InMemorySessionService, 
     app_name: str,
-    session_id: str, 
+    session_id: str,
     interviewer_name: str,   
     resume: str,
     job_description: str,
@@ -69,10 +68,11 @@ class ThoughtAgentSystem:
     """
     Prepare session.
     """
+    self.session_service = session_service
     self.session_id = session_id
     self.runner = Runner(
       app_name=app_name,
-      agent=root_agent,
+      agent=thought_agent,
       session_service=self.session_service
     )
     self.session = await self.session_service.create_session(
@@ -85,7 +85,7 @@ class ThoughtAgentSystem:
         "job_description": job_description,
         "interviewer_background": interviewer_background,
         "phase": "greeting",
-        "interview_instructions": interviewer_instruction,
+        # "interview_instructions": interviewer_instruction,
         "immediate_agent_text": "",
         "immediate_client_text": "",
         "phase_agent_text": "",
@@ -93,6 +93,7 @@ class ThoughtAgentSystem:
         "phase_start": 0.0,
         "interview_questions": interview_questions,
         "question_index": 0,
+        "question": "",
       }
     )
     return self.session

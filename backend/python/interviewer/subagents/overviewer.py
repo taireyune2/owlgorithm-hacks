@@ -6,22 +6,36 @@ from typing import AsyncGenerator, Optional
 
 import logging
 import time
-
 from . import configs
 
-interviewer_instruction = """It is currently the overview phase of the interview.
+
+################################### live agent ###################################
+_instruction = """You are an interviewer. Your name is {interviewer_name}.
+
+You are currently in the overview phase of the interview.
 In this phase, you are responsible for providing an overview of the interview process and setting expectations.
 The interview will consist of a few questions to understand how the interviewee thinks, collaborates, and navigates real-world challenges. (1 to 2 behavioral questions and takes about 10 minutes). There will not be any technical questions. There shall be some time at the end for the interviewee to ask questions.
-Ask whether the interviewee is ready to continue.
+Ask whether the interviewee understands your overview and is ready to continue.
 If the interviewee asks to clarify, please reply with a rephrase of the overview.
+DO NOT start asking interview questions.
 """
 
+live_agent = LlmAgent(
+  name="overviewer",
+  description="Provide an overview of the interview process.",
+  model=configs["live"]["model"],
+  instruction=_instruction,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0
+  ),
+)
+
+##################################### thought agent #####################################
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
-  logging.info(f"Interview instructions:\n{callback_context.state['interview_instructions']}")
+  logging.info(f"accessing overview judge")
   if callback_context.state["phase"] != "overview":
     callback_context.state["phase_start"] = time.time()
     callback_context.state["phase"] = "overview"
-    callback_context.state["interview_instructions"] = interviewer_instruction
     return
   
   if time.time() - callback_context.state["phase_start"] > configs["durations"]["overview"]:
@@ -35,7 +49,7 @@ def next_step(tool_context: ToolContext) -> None:
   Progress the conversation to the next phase.
   """
   logging.info("Proceeding to next phase.")
-  tool_context.state["phase"] = "behavioral_question"
+  # tool_context.state["phase"] = "behavioral_question"
   tool_context.actions.transfer_to_agent = "behavioral_questioner"
 
 next_step_tool = FunctionTool(func=next_step)
@@ -51,10 +65,10 @@ If the interviewee confirms or is ready for the next step, call the 'next_step_t
 """
 
 
-agent = LlmAgent(
+thought_agent = LlmAgent(
   name="overview_judge",
   description="Determine if the interviewee is ready to continue to the next step of the interview.",
-  model=configs["model"],
+  model=configs["thought"]["model"],
   instruction=_instruction,
   tools=[next_step_tool],
   before_agent_callback=[before_agent_callback],

@@ -5,20 +5,37 @@ from typing import AsyncGenerator, Optional
 
 import logging
 from . import configs
-from .introducer import interviewer_instruction as next_instruction
 
-interviewer_instruction = """It is currently the initial phase of the interview.
+################################### live agent ###################################
+_instruction = """You are an interviewer. Your name is {interviewer_name}.
+
+You are in the initial phase of the interview.
 You are responsible for the opening conversation, the greeting exchange during this interview.
 
-Start with a simple hi or hello. 
-If the interviewee responds, continue the greeting exchange.
-For example, you can ask them how their day is going or how their week has been. Keep it professional.
+Start with a simple "hi" or "hello". 
+If the interviewee responds, continue the greeting exchange. Make small talk conversation with the interviewee to make them feel comfortable.
+You can ask them about their day, week, or any other small talk topic that is appropriate.
+DO NOT ask any questions related to the resume, interview, or the interview process at this stage.
+Make sure to keep the conversation light and friendly, but sufficiently professional.
+If the interviewee does not respond, continue to greet them until they respond.
 """
 
+live_agent = LlmAgent(
+  name="greeter",
+  description="Greet the interviewee and make small talk to make them feel comfortable.",
+  model=configs["live"]["model"],
+  instruction=_instruction,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0
+  ),
+)
+
+##################################### thought agent #####################################
 def step_complete(tool_context: ToolContext) -> None:
   """
   Progress the conversation to the introduction phase.
   """
+  logging.info("Greeting exchange complete, proceeding to introduction phase.")
   # tool_context.state["phase"] = "introduction"
   tool_context.actions.transfer_to_agent = "introduction_judge"
 
@@ -37,10 +54,10 @@ interviewee:
 Tool use 'step_complete_tool': call the 'step_complete_tool' if the interviewer and interviewee have both greeted each other
 """
 
-agent = LlmAgent(
+thought_agent = LlmAgent(
   name="greeting_judge",
   description="Determine whether the interviewee has greeted",
-  model=configs["model"],
+  model=configs["thought"]["model"],
   instruction=_instruction,
   tools=[step_complete_tool,], 
   include_contents='none',

@@ -21,7 +21,7 @@ def setup():
 
   session_service = InMemorySessionService()
   runner = Runner(
-    agent=agent.root_agent,
+    agent=agent.thought_agent,
     app_name=configs["name"],
     session_service=session_service,
   )

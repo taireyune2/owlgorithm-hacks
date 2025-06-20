@@ -32,9 +32,10 @@ class InterviewManager:
     interview = InterviewRound(
       configs=self.config,
       session_id=session_id,
-      session_service=self.session_service
     )
-    await interview.start_thought_session(resume, job_description)
+    await interview.start_thought_session(
+      session_service=self.session_service, resume=resume, job_description=job_description
+    )
     self.interviews[session_id] = interview
 
   async def connect(self, websocket: WebSocket, session_id: str, tries: int = 3):
