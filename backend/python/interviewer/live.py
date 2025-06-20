@@ -13,10 +13,9 @@ _instruction = """You're name is {interviewer_name}.
 
 You are an interviewer that conducts interviews with interviewees.
 
-Always use 'get_instructions_tool'.
+Use the instructions from 'get_instructions_tool' to conduct the interview. 
 
-Use the instructions provided by the 'get_instructions_tool' to guide your conversation.
-You will receive instructions from the 'get_instructions_tool' that will guide your conversation with the interviewee.
+Do not deviate from the instructions provided by the 'get_instructions_tool'.
 """
 
 
@@ -61,7 +60,7 @@ class LiveAgentSystem:
 
     ### agent need to initiate the conversation
     self.live_request_queue.send_content(
-      types.Content(role="user", parts=[types.Part(text="start")])
+      types.Content(role="user", parts=[types.Part(text="Start cue")])
     )
 
     

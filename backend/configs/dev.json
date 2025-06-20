@@ -26,7 +26,11 @@
       "model": "gemini-2.0-flash-exp"
     },
     "thought": {
-      "model": "gemini-2.5-flash"
+      "model": "gemini-2.5-flash",
+      "durations": {
+        "introduction": 90,
+        "overview": 60
+      }
     },
     "preparer": {
       "model": "gemini-2.0-flash"

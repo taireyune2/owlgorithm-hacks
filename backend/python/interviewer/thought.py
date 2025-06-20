@@ -51,9 +51,9 @@ class ThoughtAgentSystem:
   """
   def __init__(self, session_service: InMemorySessionService):
     self.session_service = session_service
-    self.session: Optional[Session] = None
     self.runner: Optional[Runner] = None
     self.session_id: Optional[str] = None
+    self.session: Optional[Session] = None
     self.thought_queue = ThoughtQueue()
 
   async def start_session(
@@ -99,8 +99,8 @@ class ThoughtAgentSystem:
     """
     await self.session_service.delete_session(
       app_name=self.session.app_name,
-      user_id=self.session_id,
-      session_id=self.session_id
+      user_id=self.session.id,
+      session_id=self.session.id
     )
     await self.runner.close()
 
@@ -109,8 +109,8 @@ class ThoughtAgentSystem:
     Run the agent with the given message.
     """
     async for event in self.runner.run_async(
-      user_id=self.session.id,
-      session_id=self.session.id,
+      user_id=self.session_id,
+      session_id=self.session_id,
       new_message=types.Content(
         role="user",
         parts=[types.Part(text="")]
@@ -123,7 +123,7 @@ class ThoughtAgentSystem:
     Update the agent internal state with new conversation data.
     """
     client_message, agent_message = await self.thought_queue.read()
-    state = self.get_state()
+    state = await self.get_state()
     state_delta = {
       "immediate_agent_text": agent_message,
       "immediate_client_text": client_message,
@@ -137,25 +137,34 @@ class ThoughtAgentSystem:
     )
     await self.runner.session_service.append_event(self.session, system_event)
   
-  def get_instructions(self) -> str:
+  async def get_instructions(self) -> str:
     """
     Get the instructions for the interviewer from session state.
 
     Returns:
       str: Instructions for the interviewer.
     """
-    logging.info(f"Calling get_instructions from {self.session.state['phase']}")
-    logging.info(f"Interview instructions:\n{self.session.state['interview_instructions']}")
-    return self.session.state["interview_instructions"]
-  
-  def get_state(self) -> dict:
+    session = await self.session_service.get_session(
+      app_name=self.session.app_name,
+      user_id=self.session_id,
+      session_id=self.session_id
+    )
+    logging.info(f"Interview_instructions: {session.state['interview_instructions']}")
+    return session.state["interview_instructions"]
+
+  async def get_state(self) -> dict:
     """
     Obtain the current phase of the interview from session state.
 
     Returns:
       dict: Current state of the interview.
     """
-    return self.session.state.copy()
+    session = await self.session_service.get_session(
+      app_name=self.session.app_name,
+      user_id=self.session_id,
+      session_id=self.session_id
+    )
+    return session.state.copy()
   
   async def put_client_message(self, message: str) -> None:
     """

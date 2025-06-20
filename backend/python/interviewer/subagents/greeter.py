@@ -7,10 +7,11 @@ import logging
 from . import configs
 from .introducer import interviewer_instruction as next_instruction
 
-interviewer_instruction = """It is currently the greeting phase of the interview.
-You are responsible for the initial greeting during this interview.
-Initiate a simple hi or hello. 
-If the interviewee responds with a greet, followup with a more formal greet. 
+interviewer_instruction = """It is currently the initial phase of the interview.
+You are responsible for the opening conversation, the greeting exchange during this interview.
+
+Start with a simple hi or hello. 
+If the interviewee responds, continue the greeting exchange.
 For example, you can ask them how their day is going or how their week has been. Keep it professional.
 """
 
@@ -18,13 +19,8 @@ def step_complete(tool_context: ToolContext) -> None:
   """
   Progress the conversation to the introduction phase.
   """
-  logging.info("Progressing to the introduction phase.")
-  if tool_context.state["phase"] == "greeting":
-    tool_context.state["phase"] = "introduction"
-    tool_context.state["interview_instructions"] = next_instruction.format(
-      interviewer_background=tool_context.state["interviewer_background"]
-    )
-    tool_context.actions.transfer_to_agent = "introduction_judge"
+  # tool_context.state["phase"] = "introduction"
+  tool_context.actions.transfer_to_agent = "introduction_judge"
 
 step_complete_tool = FunctionTool(func=step_complete)
 
