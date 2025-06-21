@@ -103,7 +103,6 @@ export const WebSocketAudio = () => {
 
       ws.onmessage = (event) => {
         const message_from_server = JSON.parse(event.data);
-        console.log("taravat", message_from_server.signal);
         setSignal(message_from_server.signal);
         setWsStatus(message_from_server.status);
 
