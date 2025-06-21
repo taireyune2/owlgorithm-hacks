@@ -16,10 +16,35 @@
   "agent": {
     "name": "OwlSpeak",
     "voices": [
-      {"name": "Sarah", "voice": "Kore"},
-      {"name": "Emma", "voice": "Leda"},
-      {"name": "Alex", "voice": "Orus"},
-      {"name": "Tim", "voice": "Charon"}
-    ]
+      { "name": "Sarah", "voice": "Kore" },
+      { "name": "Emma", "voice": "Leda" },
+      { "name": "Alex", "voice": "Orus" },
+      { "name": "Tim", "voice": "Charon" }
+    ],
+    "refresh_interval": 10.0,
+    "live": {
+      "model": "gemini-2.0-flash-exp"
+    },
+    "preparer": {
+      "model": "gemini-2.0-flash"
+    },
+    "thought": {
+      "model": "gemini-2.5-flash",
+      "durations": {
+        "greeting": 20,
+        "introduction": 90,
+        "overview": 30,
+        "behavioral": 90,
+        "followup": 120,
+        "closing": 30
+      }
+    },
+    "interview_questions": [
+      "Describe a situation where you disagreed with a team member. How did you handle it?",
+      "Describe a time you got feedback that was hard to hear. How did you handle it?",
+      "Give an example of a time you took initiative outside your job scope.",
+      "Tell me about a time you had to make a difficult decision with limited data."
+    ],
+    "num_questions": 2
   }
 }

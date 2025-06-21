@@ -1,11 +1,19 @@
-from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
-from google.adk.agents.callback_context import CallbackContext
-from google.adk.tools import ToolContext, FunctionTool
-from google.genai import types
 from pydantic import BaseModel, Field
 from typing import Optional
 import random
 import logging
+import asyncio
+
+from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.agents.callback_context import CallbackContext
+
+from google.adk.sessions import InMemorySessionService, Session
+from google.adk.runners import Runner
+from google.genai import types
+
+from common.configs import file
+
+configs = file["agent"]["preparer"]
 
 ###################### Resume ###############################
 class ResumeJudgement(BaseModel):
@@ -34,14 +42,17 @@ Respond ONLY in valid JSON format following this schema:
 
 resume_judge = LlmAgent(
   name="resume_judge",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to judge whether the input text is a resume or not.",
   instruction=_instruction,
   output_key="resume_judgement",
   output_schema=ResumeJudgement,
   include_contents='none',
   disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True
+  disallow_transfer_to_peers=True,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=0.0
+  ),
 )
 
 ######################### Job Description ###############################
@@ -71,14 +82,17 @@ Respond ONLY in valid JSON format following this schema:
 
 job_description_judge = LlmAgent(
   name="job_description_judge",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to judge whether the input text is a job description or not.",
   instruction=_instruction,
   output_key="job_description_judgement",
   output_schema=JobDescriptionJudgement,
   include_contents='none',
   disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True
+  disallow_transfer_to_peers=True,
+  generate_content_config=types.GenerateContentConfig(
+    temperature=0.0
+  ),
 )
 
 
@@ -104,29 +118,33 @@ def check_inputs_callback(callback_context: CallbackContext) -> Optional[types.C
   return types.Content(role="agent", parts=[types.Part(text=error_message)])
 
 
-_instruction = """You are a person who is hiring. Your name is {interviewer_name}.
+_instruction = """You are a person who is hiring.
 
 You need to give a background about yourself to the candidate.
 This is the job description you wrote:
 
 {job_description}
 
-Please give a brief background of yourself. 
+Please write a brief background of yourself. 
 This description should be clear and concise, befitting the PERSON WHO IS HIRING.
-The description should be no more than 100 words. Please use fictional information where ever needed.
-Respond only with your background. No need to greet.
+The description should be no more than 50 words. Please use fictional information where ever needed.
+Respond only with your background. No need to greet or say your name.
 """
 
 interviewer_agent = LlmAgent(
   name="self_introduction_agent",
-  model="gemini-2.0-flash-exp",
+  model=configs["model"],
   description="Agent to provide background information about the interviewer.",
   instruction=_instruction,
   include_contents='none',
   disallow_transfer_to_parent=True,
   disallow_transfer_to_peers=True,
   before_agent_callback=[check_inputs_callback],
+  generate_content_config=types.GenerateContentConfig(
+    temperature=2.0,
+  ),
 )
+
 
 ################################# Control Flow ####################################
 
@@ -147,3 +165,55 @@ preparation_agent = SequentialAgent(
     interviewer_agent
   ],
 )
+
+
+############################## Run ######################################
+async def prepare_interview(
+  app_name: str,
+  session_id: str,
+  interviewer_name: str,
+  resume: str,
+  job_description: str,
+  session_service: InMemorySessionService,
+) -> str:
+  """
+  Prepare the interview round by checking the inputs and creating the background info.
+  """
+  runner: Runner = Runner(
+    app_name=app_name,
+    agent=preparation_agent,
+    session_service=session_service
+  )
+  session = await session_service.create_session(
+    app_name=app_name,
+    user_id=session_id,
+    session_id=session_id,
+    state={
+      "interviewer_name": interviewer_name,
+      "resume": resume,
+      "job_description": job_description,
+    }
+  )
+
+  results = []
+  async for event in runner.run_async(
+    user_id=session_id,
+    session_id=session_id,
+    new_message=types.Content(
+      role="user",
+      parts=[types.Part(text="")]
+    )
+  ):
+    if event.is_final_response():
+      results.append(event.content.parts[0].text)
+
+  if not results:
+    raise Exception("Agents failed to generate a proper response.")
+  if results[-1].startswith("Invalid inputs: "):
+    raise ValueError(results[-1])
+  
+  await runner.close()
+  await session_service.delete_session(
+    app_name=app_name, user_id=session_id, session_id=session_id
+  )
+  return results[-1]

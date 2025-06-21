@@ -6,14 +6,14 @@ import traceback
 from fastapi import APIRouter, WebSocket, Depends, WebSocketDisconnect, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from starlette.requests import Request
 
-from . import interview
+from .manager import InterviewManager
 from common import configs
+from starlette.requests import Request
 from service import limiter
 
 
-manager = interview.InterviewManager(config=configs.file["agent"])
+manager = InterviewManager(config=configs.file["agent"])
 
 ##################### FastAPI endpoints ######################
 class Resume(BaseModel):
@@ -78,6 +78,6 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     logging.error(f"Error in WebSocket connection for session {session_id}: {e}")
     logging.error(traceback.format_exc())
   finally:
-    manager.disconnect(session_id)
-    logging.info(f"Interview {session_id} has been cleaned up.")
+    await manager.disconnect(session_id)
+  logging.info(f"Interview {session_id} has been cleaned up.")
 

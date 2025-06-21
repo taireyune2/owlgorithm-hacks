@@ -2,9 +2,9 @@
 
 
 image_name="owlgorithm-hacks-frontend"
-PROJECT_ID=
-Registry_URL=
-repository_name=
+PROJECT_ID="interview-agent-463400"
+Registry_URL="us-west1-docker.pkg.dev/interview-agent-463400/interview-agent"
+repository_name="interview-agent"
 
 # Set your backend service URL (your deployed backend)
 BACKEND_URL="https://interview-agent-178724632712.us-west1.run.app"

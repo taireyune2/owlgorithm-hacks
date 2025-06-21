@@ -1,34 +1,46 @@
-from google.adk.agents import LlmAgent
 from pydantic import BaseModel, Field
+from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.tools import ToolContext, FunctionTool
+from google.adk.agents.callback_context import CallbackContext
+from google.adk.models import LlmResponse
+from google.genai import types
+from typing import AsyncGenerator, Optional
 
-from .. import utils
+import logging
+import time
+import json
+
+from . import configs
+
 
 class OnTopicJudgement(BaseModel):
-  on_topic: bool = Field(default=False, description="Indicates whether the user's response is on-topic based on the interview question and topic.")
+  on_topic: bool = Field(default=False, description="Indicates whether the user's response is on-topic based on the provided context.")
   explanation: str = Field(default="", description="Brief explanation if the response is off-topic.")
 
-# TODO: few shot example
-instruction = """
-You are a interviewer auditor/admin.
-You are responsible for detecting whether the user's response is on-topic or not.
 
-Here is a summary of the interview topic:
+_instruction = """You are a interviewer auditor/admin.
+You are responsible for detecting whether the user's response is related to the background or not.
 
-Behavioral interview.
+Here are the relevant background:
 
-Here is the interview question:
+Interviewee's resume: 
+{resume}
 
-{behavioral_question}
+Interview job description:
+{job_description}
 
-Here is the user's response:
+Interview question:
+{question}
 
-[start_user_response]
-{user_response}
-[end_user_response]
+Here is the interviewee's response:
+[start_interviewee]
+{phase_client_text}
+[end_interviewee]
 
-Is the user's response on-topic based on the interview question and topic?
-Please answer with "yes" or "no".
-If "no", provide a brief explanation of why the response is off-topic.
+Your task is to determine if the user's response is relevant to the provided context.
+
+Please answer with "True" or "False".
+If "False", provide a brief explanation of why the response is off-topic.
 Respond ONLY in valid JSON format following this schema:
 
 ```json
@@ -41,19 +53,26 @@ Respond ONLY in valid JSON format following this schema:
 Do NOT include any explanations, context, or text outside of this JSON object.
 """
 
-agent = LlmAgent(
+def after_model_callback(callback_context: CallbackContext, response: LlmResponse) -> Optional[LlmResponse]:
+  """
+  Callback to handle the response from the agent.
+  """
+  result = json.loads(response.content.parts[0].text)
+  if result.get("on_topic", False):
+    callback_context.state["off_topic"] = 0
+  else:
+    callback_context.state["off_topic"] += 1
+    logging.info(f"Off-topic count increased with reason: {result.get('explanation', 'No explanation provided')}")
+
+
+ontopic_detector = LlmAgent(
   name="ontopic_detector", 
   description="Detect whether the user response is on-topic.",
-  model="gemini-2.0-flash-exp",
-  instruction=instruction,
-  # tools=[],
-  output_key="on_topic_judgement",
+  model=configs["model"],
+  instruction=_instruction,
+  after_model_callback=after_model_callback,
   output_schema=OnTopicJudgement,  
   disallow_transfer_to_parent=True,
   disallow_transfer_to_peers=True,
-  before_agent_callback=[utils.log_agent_context],
-  before_model_callback=[utils.log_before_model_context],
-  after_model_callback=[utils.log_after_model_context],
-  after_agent_callback=[utils.log_agent_context],
   include_contents='none',
 )
