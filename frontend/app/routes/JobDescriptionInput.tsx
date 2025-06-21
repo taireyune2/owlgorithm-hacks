@@ -7,7 +7,6 @@ export const JobDescriptionVar = makeVar<string | null>(null);
 export const JobDescriptionInput = () => {
   const [jobDescriptionInput, setJobDescriptionInput] = useState("");
   JobDescriptionVar(jobDescriptionInput);
-  console.log("Job Description Input:", jobDescriptionInput);
   return (
     <div className="flex items-center justify-between ml-3 w-[500px]">
       <div className="text-lg font-bold">
