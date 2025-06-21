@@ -119,23 +119,23 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, 
   """Client to agent communication"""
   while True:
     # Decode JSON message
-    try:
-      # Wait up to PING_INTERVAL for client message
-      message_json = await websocket.receive_text()
-      message = json.loads(message_json)
-      mime_type = message["mime_type"]
-      data = message["data"]
-      
-      # Send the message to the agent
-      if mime_type == "audio/pcm":
-        decoded_data = base64.b64decode(data)
-        # Send the audio data to Gemini through ADK's LiveRequestQueue
-        live_request_queue.send_realtime(
-            types.Blob(
-                data=decoded_data,
-                mime_type=f"audio/pcm;rate={SEND_SAMPLE_RATE}",
-            )
-        )
+    # try:
+    # Wait up to PING_INTERVAL for client message
+    message_json = await websocket.receive_text()
+    message = json.loads(message_json)
+    mime_type = message["mime_type"]
+    data = message["data"]
+    
+    # Send the message to the agent
+    if mime_type == "audio/pcm":
+      decoded_data = base64.b64decode(data)
+      # Send the audio data to Gemini through ADK's LiveRequestQueue
+      live_request_queue.send_realtime(
+          types.Blob(
+              data=decoded_data,
+              mime_type=f"audio/pcm;rate={SEND_SAMPLE_RATE}",
+          )
+      )
         
         # elapsed_seconds = time.time() - start_time
         # logging.info(f"🔇 Skipped noise frame (no voice detected) - {elapsed_seconds:.2f} - start_time = {start_time}")
@@ -143,25 +143,25 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, 
         #   consecutiveIdleCountAllowed -= 1
         #   start_time = time.time() 
         #   raise TimeoutError("No valid speech detected the PING_INTERVAL")
-      else:
-        raise ValueError(f"Mime type not supported: {mime_type}")
-    except TimeoutError:
-      if consecutiveIdleCountAllowed <= 0:
-        await websocket.send_text(json.dumps({
-          "status": "closed",
-          "signal": "close_socket",
-          "mime_type": "text/plain",
-          "data": "Maximum waiting time has been reached. Closing the socket"
-        }))
-        raise TimeoutError("No valid speech detected")
-      else:
-        await websocket.send_text(json.dumps({
-          "signal": "waiting",
-          "mime_type": "text/plain",
-          "data": "Agent is waiting for you to respond"
-        }))
-    except Exception as e:
-      raise e
+    #   else:
+    #     raise ValueError(f"Mime type not supported: {mime_type}")
+    # except TimeoutError:
+    #   if consecutiveIdleCountAllowed <= 0:
+    #     await websocket.send_text(json.dumps({
+    #       "status": "closed",
+    #       "signal": "close_socket",
+    #       "mime_type": "text/plain",
+    #       "data": "Maximum waiting time has been reached. Closing the socket"
+    #     }))
+    #     raise TimeoutError("No valid speech detected")
+    #   else:
+    #     await websocket.send_text(json.dumps({
+    #       "signal": "waiting",
+    #       "mime_type": "text/plain",
+    #       "data": "Agent is waiting for you to respond"
+    #     }))
+    # except Exception as e:
+    #   raise e
 
 
 async def process_and_send_audio(live_request_queue, audio_queue):

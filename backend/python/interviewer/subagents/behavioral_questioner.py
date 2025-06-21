@@ -19,7 +19,7 @@ Here is the question: {behavioral_question}
 
 If the interviewee ask for clarification, please rephrase the question.
 If the interviewee has starting answering the question, DO NOT interrupt them.
-You are ONLY to respond with affirmations like "tell me more", "uh-huh", "hmm", or "nice" when the interviewee is providing their response.
+You are ONLY to respond with affirmations like "tell me more", "okay",  or "nice" when the interviewee is providing their response.
 """
 
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
