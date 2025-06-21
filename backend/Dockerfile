@@ -5,6 +5,9 @@ WORKDIR /interview-agent
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
+### modifying adk source code
+COPY configs/functions.py /usr/local/lib/python3.12/site-packages/google/adk/flows/llm_flows/functions.py
+
 ### copy source code
 COPY . .
 ENV PYTHONPATH=/interview-agent/python

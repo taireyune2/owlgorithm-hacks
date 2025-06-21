@@ -127,6 +127,7 @@ class InterviewRound:
       logging.error(f"⚠️ Unhandled error in run: {e}")
       logging.error(traceback.format_exc())
       raise e
+
     
   async def _update_thought(self) -> None:
     """
