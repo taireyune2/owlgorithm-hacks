@@ -41,6 +41,25 @@ export const WebSocketAudio = () => {
     setWsStatus(wsStatus);
   }, []);
 
+  // Cleanup effect to stop audio when component unmounts
+  useEffect(() => {
+    return () => {
+      // Stop audio playback when component unmounts
+      if (audioPlayerNodeRef.current) {
+        audioPlayerNodeRef.current.port.postMessage({ type: "stop" });
+        audioPlayerNodeRef.current = null;
+      }
+      
+      // Close WebSocket connection
+      if (websocket) {
+        websocket.close(1000, "Component unmounted");
+        setWebsocket(null);
+      }
+      
+      setIsSpeaking(false);
+    };
+  }, [websocket]);
+
   const base64ToArray = (base64: string): ArrayBuffer => {
     const binaryString = window.atob(base64);
     const len = binaryString.length;
@@ -131,10 +150,18 @@ export const WebSocketAudio = () => {
 
       ws.onclose = () => {
         console.log("WebSocket connection closed.");
+        
+        // Stop audio playback when connection is closed
+        if (audioPlayerNodeRef.current) {
+          audioPlayerNodeRef.current.port.postMessage({ type: "stop" });
+          audioPlayerNodeRef.current = null;
+        }
+        
         setMessages((prev) => [
           ...prev,
           { id: "status", text: "Connection closed" },
         ]);
+        setIsSpeaking(false);
       };
 
       setWebsocket(ws); // set to React state
@@ -209,15 +236,21 @@ export const WebSocketAudio = () => {
   const handleEndAudio = () => {
     if (isRecording) {
       setIsRecording(false);
+      
+      // Immediately stop audio playback
+      if (audioPlayerNodeRef.current) {
+        // Send stop command to clear audio buffer
+        audioPlayerNodeRef.current.port.postMessage({ type: "stop" });
+        audioPlayerNodeRef.current = null;
+      }
+      
+      // Close WebSocket connection
       if (websocket) {
         websocket.close(1000, "Session ended by user");
         setWebsocket(null);
         setWsStatus("close");
       }
-      // Reset audio nodes
-      if (audioPlayerNodeRef.current) {
-        audioPlayerNodeRef.current = null;
-      }
+      
       setIsSpeaking(false);
     }
   };
