@@ -48,12 +48,12 @@ async def record_response(response: str) -> None:
 
 
 root_agent = LlmAgent(
-   name="google_search_agent",
+   name="root_agent",
    model="gemini-2.0-flash-exp", # if this model does not work, try below
    #model="gemini-2.0-flash-live-001",
-   description="Agent to answer questions using Google Search.",
-   instruction="Answer the question using the Google Search tool.",
-   tools=[google_search],
+   description="Interviewer that conducts behavioral interviews",
+   instruction="Greet the interviwee and ask them to introduce themselves.",
+  #  tools=[google_search],
 )
 
 

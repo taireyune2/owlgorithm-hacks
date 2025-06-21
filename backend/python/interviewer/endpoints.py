@@ -9,6 +9,8 @@ from typing import Optional
 
 from .manager import InterviewManager
 from common import configs
+from starlette.requests import Request
+from service import limiter
 
 
 manager = InterviewManager(config=configs.file["agent"])
@@ -37,14 +39,15 @@ router = APIRouter(
 
 
 @router.post("/upload")
-async def upload_material(request: UserInfo):
+@limiter.limit("3/minute")  # Allows only 3 requests per minute
+async def upload_material(request: Request, user_info: UserInfo):
   """
   Endpoint to upload user resume and job description.
   If the materials are valid, the interview session will start.
   If the materials are invalid, the invalid reason will be returned in the error details.
   """
   try:
-    await manager.initialize_interview(request.session_id, request.resume.rawText, request.job_description.rawText)
+    await manager.initialize_interview(user_info.session_id, user_info.resume.rawText, user_info.job_description.rawText)
     return {"status": "success", "message": "Materials uploaded successfully."}
   except ValueError as e:
     raise HTTPException(status_code=400, detail=str(e))

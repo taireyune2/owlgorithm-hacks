@@ -21,6 +21,13 @@ class PCMPlayerProcessor extends AudioWorkletProcessor {
         return;
       }
 
+      // Handle stop command for immediate audio stop
+      if (event.data.type === "stop") {
+        this.readIndex = this.writeIndex; // Clear the buffer
+        console.log("Stop command received, clearing the buffer immediately.");
+        return;
+      }
+
       // Decode the base64 data to int16 array.
       const int16Samples = new Int16Array(event.data);
 
