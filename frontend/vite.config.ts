@@ -9,6 +9,10 @@ export default defineConfig({
   ssr: {
     noExternal: ["@apollo/client"],
   },
+  define: {
+    'import.meta.env.VITE_BACKEND_API_URL': JSON.stringify(process.env.VITE_BACKEND_API_URL),
+    'import.meta.env.VITE_WEBSOCKET_URL': JSON.stringify(process.env.VITE_WEBSOCKET_URL),
+  },
   plugins: [
     remix({
       future: {
