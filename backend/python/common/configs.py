@@ -12,5 +12,5 @@ CONFIG_PATH = os.getenv("CONFIG_DIR", os.path.join(BASE_DIR, "..", "configs", "d
 with open(CONFIG_PATH, "r") as f:
   file: dict = json.load(f)
 
-if file["logging"]["env"] != "prod":
+if file["api"]["dev"]:
   random.seed(99)

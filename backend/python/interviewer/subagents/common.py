@@ -19,11 +19,13 @@ def route_interview(ctx: ToolContext) -> None:
     question = ctx.state["working_followup_question"]
     ctx.state["followup_questions"] = ctx.state["followup_questions"] + [question]
     ctx.state["working_followup_question"] = ""
+    ctx.state["phase"] = "behavioral_question"
     ctx.actions.transfer_to_agent = "followup_questioner"
   
   ### direct to next behavioral question
   elif ctx.state["question_index"] + 1 < len(ctx.state["interview_questions"]):
     ctx.state["question_index"] += 1
+    ctx.state["phase"] = "followup_question"
     ctx.actions.transfer_to_agent = "behavioral_questioner"
 
   ### direct to closing phase
