@@ -10,8 +10,12 @@ import { StartSessionMascot } from "./StartSessionMascot";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Live Session" },
-    { name: "description", content: "Welcome to Remix!" },
+    { title: "Behavioral Interview Assistant" },
+    {
+      name: "description",
+      content:
+        "Prepare for your behavioral interviews with AI-driven insights and personalized feedback. Enhance your interview skills and ace your next job opportunity.",
+    },
   ];
 };
 
