@@ -22,5 +22,8 @@ random.seed(99)
 
 # _args = _get_args()
 
-with open(os.getenv("CONFIG_DIR", "../configs/dev.json"), "r") as f:
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CONFIG_PATH = os.getenv("CONFIG_DIR", os.path.join(BASE_DIR, "..", "configs", "dev.json"))
+
+with open(CONFIG_PATH, "r") as f:
   file: dict = json.load(f)
