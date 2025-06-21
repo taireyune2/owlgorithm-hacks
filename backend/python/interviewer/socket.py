@@ -11,11 +11,25 @@ import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 from google.genai import types
 from google.adk.events import Event
-from typing import Optional, AsyncGenerator
+from typing import Optional, AsyncGenerator, Callable, Awaitable
 
+from fastapi import WebSocket, WebSocketDisconnect
+from google.genai import types
+from google.adk.events import Event
+from google.adk.agents import LiveRequestQueue
 
-async def receive_and_process_responses(websocket, live_events):
-  """Agent to client communication"""
+SEND_SAMPLE_RATE = 16000
+
+async def handle_live_events(
+  live_events: AsyncGenerator[Event, None],
+  websocket: WebSocket, 
+  collect_client_txt: Callable[[str], Awaitable[None]],
+  collect_agent_txt: Callable[[str], Awaitable[None]],
+) -> None:
+  """
+  Handle the live agent's output events.
+  Parse the events and send them to the client and/or collect them for further processing.
+  """
 
   # Track user and model outputs between turn completion events
   input_texts = []
@@ -42,19 +56,10 @@ async def receive_and_process_responses(websocket, live_events):
           "data": "Response completed by Gemini"
         }))
 
-        if input_texts:
-          # Get unique texts to prevent duplication
-          unique_texts = list(dict.fromkeys(input_texts))
-          logging.info(f"Input transcription: {' '.join(unique_texts)}")
+        flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+        await collect_client_txt(flag)
+        await collect_agent_txt(flag)
 
-        if output_texts:
-          # Get unique texts to prevent duplication
-          unique_texts = list(dict.fromkeys(output_texts))
-          logging.info(f"Output transcription: {' '.join(unique_texts)}")
-
-        input_texts = []
-        output_texts = []
-        interrupted = False
         continue
       
       # Read the types.Content and its first Part
@@ -89,7 +94,8 @@ async def receive_and_process_responses(websocket, live_events):
             "data": part.text
           }
           await websocket.send_text(json.dumps(message))
-          print(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+          await collect_client_txt(part.text)
+          # logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
 
         # From the logs, we can see the duplicated text issue happens because
         # we get streaming chunks with "partial=True" followed by a final consolidated
@@ -105,9 +111,11 @@ async def receive_and_process_responses(websocket, live_events):
             "data": part.text
           }
           await websocket.send_text(json.dumps(message))
-          print(f"[AGENT TO CLIENT]: text/plain: {message}")
+          await collect_agent_txt(part.text)
+          # logging.info(f"[AGENT TO CLIENT]: text/plain: {message}")
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, consecutiveIdleCountAllowed):
+# async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, consecutiveIdleCountAllowed):
   """Client to agent communication"""
   while True:
     # Decode JSON message
@@ -121,7 +129,6 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, 
       # Send the message to the agent
       if mime_type == "audio/pcm":
         decoded_data = base64.b64decode(data)
-        SEND_SAMPLE_RATE = 16000
         # Send the audio data to Gemini through ADK's LiveRequestQueue
         live_request_queue.send_realtime(
             types.Blob(
@@ -156,9 +163,9 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, 
     except Exception as e:
       raise e
 
+
 async def process_and_send_audio(live_request_queue, audio_queue):
   while True:
-    SEND_SAMPLE_RATE = 16000
     decoded_data = await audio_queue.get()
 
     # Send the audio data to Gemini through ADK's LiveRequestQueue

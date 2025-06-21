@@ -6,7 +6,7 @@ from typing import AsyncGenerator, Optional
 
 import logging
 import time
-from .....archive.agents import configs
+from . import configs
 
 ############################## live agent instructions ##############################
 interviewer_instruction = """It is the end of the interview.

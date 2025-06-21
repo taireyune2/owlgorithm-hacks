@@ -112,7 +112,11 @@ class InterviewRound:
           )
         )
         handle_inbound_messages_task = tg.create_task(
-          socket.handle_inbound_messages(websocket, self.live.live_request_queue)
+          socket.client_to_agent_messaging(
+            websocket, 
+            self.live.live_request_queue,
+            None, 3,
+          )
         )
         update_thought_task = tg.create_task(self._update_thought())
       
