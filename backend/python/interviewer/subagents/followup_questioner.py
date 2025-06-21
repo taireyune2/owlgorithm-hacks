@@ -8,7 +8,8 @@ import logging
 import time
 from . import configs
 
-from .followup_generator import question_generator
+from .common import question_generator_second, route_interview
+from .ontopic_detector import ontopic_detector
 
 ############################# live agent instructions ##############################
 interviewer_instruction = """It is currently the followup question part of the interview.
@@ -25,39 +26,54 @@ You are ONLY to respond with affirmations like "tell me more", "uh-huh", "hmm", 
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
   if callback_context.state["phase"] != "followup_question":
     ### setup state and instructions
-    callback_context.state["phase_start"] = time.time()
     callback_context.state["phase"] = "followup_question"
-    callback_context.state["interview_instructions"] = interviewer_instruction.format(
-      followup_question=callback_context.state["followup_question"]
-    )
-    return
 
-  if time.time() - callback_context.state["phase_start"] > configs["durations"]["followup"]:
-    logging.info("Follow-up question phase timed out, proceeding to next phase.")
-    # callback_context.actions.transfer_to_agent = "overview_judge"
-    return
+  questions = callback_context.state["followup_questions"]
+  if len(questions) > 0:
+    callback_context.state["interview_instructions"] = interviewer_instruction.format(
+      followup_question=questions[-1]
+    )
+  else:
+    raise ValueError("No follow-up questions available in the state.")
+
 
 ################################ thought agent - state manager #####################################
-def criteria_met(tool_context: ToolContext) -> None:
+def criteria_met(met: str, reason: str, tool_context: ToolContext) -> None:
   """
   Progress the conversation to the next phase.
   """
-  logging.info("Criteria met in followup questioner, proceeding to next phase.")
-  # tool_context.actions.transfer_to_agent = "overview_judge"
+  if met:
+    logging.info("Criteria met, proceeding to next phase.")
+    return route_interview(tool_context)
+
+  logging.info(f"timings: { time.time() - tool_context.state['phase_start']} and {configs['durations']['followup']}")
+  if time.time() - tool_context.state["phase_start"] > configs["durations"]["followup"]:
+    logging.info("Follow-up question phase timed out, proceeding to next phase.")
+    return route_interview(tool_context)
+
+  tool_context.actions.skip_summarization = True
 
 criteria_met_tool = FunctionTool(func=criteria_met)
 
 _instruction = """You are an answer judge.
 You are responsible for determining whether the interviewee has provided a detailed response to the follow-up question.
 Here is the question: {question}
-Here is the follow-up question: {followup_question}
+Here are the follow-up questions: {followup_questions}
 
 Here is the response: 
 [start_interviewee]
 {phase_client_text}
 [end_interviewee]
 
-If the interviewee's response sufficiently answers the follow-up question, call the 'criteria_met_tool' to proceed to the next phase.
+To meet the criteria, the interviewee's response should appropriately answer the follow-up question.
+
+Tool call 'criteria_met_tool': 
+If the interviewee's response meets the criteria, call the 'criteria_met_tool' with input 'True' and an empty reason string.
+Otherwise, call the 'criteria_met_tool' with input 'False' and a reason string explaining why the criteria are not met.
+
+Arguments for 'criteria_met_tool':
+- met: boolean indicating whether the criteria are met
+- reason: string explaining why the criteria are not met, if applicable.
 """
 
 followup_judge = LlmAgent(
@@ -79,7 +95,8 @@ agent = ParallelAgent(
   description="Agent that manages the follow-up question phase of the interview.",
   sub_agents=[
     followup_judge,
-    question_generator,
+    question_generator_second, 
+    ontopic_detector,
   ],
   before_agent_callback=[before_agent_callback],
 )

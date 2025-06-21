@@ -25,18 +25,17 @@
     "live": {
       "model": "gemini-2.0-flash-exp"
     },
-
     "preparer": {
       "model": "gemini-2.0-flash"
     },
     "thought": {
       "model": "gemini-2.5-flash",
       "durations": {
-        "greeting": 15,
+        "greeting": 20,
         "introduction": 90,
         "overview": 30,
         "behavioral": 90,
-        "followup": 60,
+        "followup": 120,
         "closing": 30
       }
     },

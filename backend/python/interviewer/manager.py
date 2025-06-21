@@ -47,8 +47,8 @@ class InterviewManager:
       await interview_round.start_live_session()
       await interview_round.run(websocket)
     elif tries > 0:
-      logging.info(f"Interview Round {session_id} is not ready. Retrying in 1 second with {tries} retries...")
-      await asyncio.sleep(1)
+      logging.info(f"Interview Round {session_id} is not ready. Retrying in 2 seconds with {tries} retries...")
+      await asyncio.sleep(2)
       return await self.connect(websocket, session_id, tries - 1)
     else:
       logging.error(f"Interview Round {session_id} is not ready after retries. Disconnecting.")

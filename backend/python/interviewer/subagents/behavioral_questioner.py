@@ -6,9 +6,10 @@ from typing import AsyncGenerator, Optional
 
 import logging
 import time
+
 from . import configs
 
-from .followup_generator import question_generator
+from .common import question_generator_first, route_interview
 
 ##################################### live agent instructions #####################################
 interviewer_instruction = """It is currently the main behavioral question phase of the interview.
@@ -22,6 +23,7 @@ You are ONLY to respond with affirmations like "tell me more", "uh-huh", "hmm", 
 """
 
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
+  logging.info("Entering behavioral question phase callback.")
   if callback_context.state["phase"] != "behavioral_question":
     ### setup states
     callback_context.state["phase_start"] = time.time()
@@ -35,20 +37,22 @@ def before_agent_callback(callback_context: CallbackContext) -> Optional[types.C
     ### clear previous phase context
     callback_context.state["phase_client_text"] = ""
     callback_context.state["phase_agent_text"] = ""
-    return
 
-  if time.time() - callback_context.state["phase_start"] > configs["durations"]["behavioral"]:
-    logging.info("Behavioral question phase timed out, proceeding to next phase.")
-    callback_context.actions.transfer_to_agent = "followup_questioner"
-    return
-  
 ##################### thought agent - state manager #####################################
-def criteria_met(tool_context: ToolContext) -> None:
+def criteria_met(met: bool, reason: str, tool_context: ToolContext) -> None:
   """
   Progress the conversation to the next phase.
   """
-  logging.info("Criteria met, proceeding to next phase.")
-  tool_context.actions.transfer_to_agent = "followup_questioner"
+  if met:
+    logging.info("Criteria met, proceeding to next phase.")
+    return route_interview(tool_context)
+
+  logging.info(f"timings: { time.time() - tool_context.state['phase_start']} and {configs['durations']['behavioral']}")
+  if time.time() - tool_context.state["phase_start"] > configs["durations"]["behavioral"]:
+    logging.info("Behavioral question phase timed out, proceeding to next phase.")
+    return route_interview(tool_context)
+    
+  tool_context.actions.skip_summarization = True
 
 criteria_met_tool = FunctionTool(func=criteria_met)
 
@@ -61,9 +65,16 @@ Here is the response:
 {phase_client_text}
 [end_interviewee]
 
-The response should at least 100 words and provide a detailed answer to the question.
-If the response meets the criteria, call the 'criteria_met_tool' to proceed to the next phase.
-"""#TODO adjust word count
+To meet the criteria, the response should at least 100 words and provide a detailed answer to the question.
+
+Tool call 'criteria_met_tool': 
+If the interviewee's response meets the criteria, call the 'criteria_met_tool' with input 'True' and an empty reason.
+Otherwise, call the 'criteria_met_tool' with input 'False' to indicate that the response is insufficient and provide the reason.
+
+Arguments for 'criteria_met_tool':
+- met: A boolean indicating whether the criteria are met.
+- reason: A string explaining why the criteria are not met, if applicable.
+"""
 
 answer_judge = LlmAgent(
   name="answer_judge",
@@ -77,14 +88,13 @@ answer_judge = LlmAgent(
   ),
 )
 
-
 ##################### thought agent - workflow #####################################
 agent = ParallelAgent(
   name="behavioral_questioner",
   description="Agent that manages the behavioral question phase of the interview.",
   sub_agents=[
     answer_judge,
-    question_generator,
+    question_generator_first,
   ],
   before_agent_callback=[before_agent_callback],
 )

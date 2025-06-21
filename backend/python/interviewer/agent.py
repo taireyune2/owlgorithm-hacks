@@ -13,12 +13,12 @@ from google.adk.events import Event
 from google.genai import types
 
 from .subagents import (
-  behavioral_questioner, 
   greeter, 
   introducer,
-  introduction_listener, 
-  overviewer, 
-  closing_agent,
+  overviewer,
+  behavioral_questioner, 
+  followup_questioner,
+  closing_responder,
 )
 
 class InterviewerAgent(BaseAgent):
@@ -28,19 +28,21 @@ class InterviewerAgent(BaseAgent):
   This agent does not call the LLM, but routes requests to other agents
   based on predefined rules.
   """
-  greeter: LlmAgent
-  introducer: LlmAgent
-  overviewer: LlmAgent
-  behavioral_questioner: LlmAgent
-  closer: LlmAgent
+  greeter: BaseAgent
+  introducer: BaseAgent
+  overviewer: BaseAgent
+  behavioral_questioner: BaseAgent
+  followup_questioner: BaseAgent
+  closing_responder: BaseAgent
 
   def __init__(
     self, 
-    greeter: LlmAgent,
-    introducer: LlmAgent,
-    overviewer: LlmAgent,
-    behavioral_questioner: LlmAgent,
-    closer: LlmAgent,
+    greeter: BaseAgent,
+    introducer: BaseAgent,
+    overviewer: BaseAgent,
+    behavioral_questioner: BaseAgent,
+    followup_questioner: BaseAgent,
+    closing_responder: BaseAgent,
     name: str = "interviewer",
   ):
     super().__init__(
@@ -48,9 +50,14 @@ class InterviewerAgent(BaseAgent):
       introducer=introducer,
       overviewer=overviewer,
       behavioral_questioner=behavioral_questioner,
-      closer=closer,
+      followup_questioner=followup_questioner,
+      closing_responder=closing_responder,
       name=name,
-      sub_agents=[greeter, introducer, overviewer, behavioral_questioner, closer],
+      sub_agents=[
+        greeter, introducer, overviewer,
+        behavioral_questioner, followup_questioner,
+        closing_responder
+      ],
       description="Route agents based on the interview phase.",
     )
 
@@ -71,36 +78,12 @@ class InterviewerAgent(BaseAgent):
     if ctx.session.state["phase"] == "behavioral_question":
       async for event in self.behavioral_questioner.run_async(ctx):
         yield event
-    if ctx.session.state["phase"] == "closing":
-      async for event in self.closer.run_async(ctx):
+    if ctx.session.state["phase"] == "followup_question":
+      async for event in self.followup_questioner.run_async(ctx):
         yield event
-
-        
-  # @override
-  # async def _run_live_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
-  #   """
-  #   Deterministic control flow for other interview agents
-  #   """
-  #   if ctx.session.state["phase"] == "greeting":
-  #     async for event in self.greeter.run_live(ctx):
-  #       yield event
-  #   if ctx.session.state["phase"] == "introduction":
-  #     async for event in self.introducer.run_live(ctx):
-  #       yield event
-  #   if ctx.session.state["phase"] == "introduction_response":
-  #     async for event in self.introduction_listener.run_live(ctx):
-  #       yield event
-  #   if ctx.session.state["phase"] == "overview":
-  #     async for event in self.overviewer.run_live(ctx):
-  #       yield event
-  #   if ctx.session.state["phase"] == "behavioral_question":
-  #     async for event in self.behavioral_questioner.run_live(ctx):
-  #       yield event
-  #   if ctx.session.state["phase"] == "closing":
-  #     async for event in self.closer.run_async(ctx):
-  #       yield event
-  #   if ctx.end_invocation:
-  #     return
+    if ctx.session.state["phase"] == "closing_response":
+      async for event in self.closing_responder.run_async(ctx):
+        yield event
 
 
 root_agent = InterviewerAgent(
@@ -108,8 +91,9 @@ root_agent = InterviewerAgent(
   introducer.agent,
   overviewer.agent,
   behavioral_questioner.agent,
-  closing_agent.agent,
-  name="root_agent"
+  followup_questioner.agent,
+  closing_responder.agent,
+  name="thought_agent"
 )
 
 

@@ -1,4 +1,4 @@
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, BaseAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
@@ -26,25 +26,30 @@ def before_agent_callback(callback_context: CallbackContext) -> Optional[types.C
     callback_context.state["interview_instructions"] = interviewer_instruction.format(
       interviewer_background=callback_context.state["interviewer_background"]
     )
-    return
-
-  if time.time() - callback_context.state["phase_start"] > configs["durations"]["introduction"]:
-    logging.info("Introduction phase timed out, proceeding to next phase.")
-    callback_context.actions.transfer_to_agent = "overview_judge"
-    return
-  
 
 ############################### thought agent ###############################
-def criteria_met(tool_context: ToolContext) -> None:
+NEXT_STEP_AGENT = "overview_judge"  
+
+def criteria_met(met: bool, reason: str, tool_context: ToolContext) -> None:
   """
   Progress the conversation to the next phase.
   """
-  logging.info("Criteria met, proceeding to next phase.")
-  # tool_context.state["phase"] = "overview"
-  tool_context.actions.transfer_to_agent = "overview_judge"
+  if met:
+    logging.info("Criteria met, proceeding to next phase.")
+    # tool_context.state["phase"] = "overview"
+    tool_context.actions.transfer_to_agent = NEXT_STEP_AGENT
+    return
+  
+  logging.info(f"Criteria not met: {reason}")
+  logging.info(f"timings: { time.time() - tool_context.state["phase_start"]} and {configs["durations"]["introduction"]}")
+  if time.time() - tool_context.state["phase_start"] > configs["durations"]["introduction"]:
+    logging.info("Introduction phase timed out, proceeding to next phase.")
+    tool_context.actions.transfer_to_agent = NEXT_STEP_AGENT
+    return
+  
+  tool_context.actions.skip_summarization = True
 
 criteria_met_tool = FunctionTool(func=criteria_met)
-
 
 _instruction = """You are an introduction judge.
 
@@ -57,8 +62,10 @@ Here is the self-introduction:
 
 The self-introduction should be at least 30 words long and include the interviewee's background and experience.
 
-If the interviewee's self-introduction meets these criteria, call the 'criteria_met_tool' to proceed.
+If the interviewee's self-introduction meets these criteria, call the 'criteria_met_tool' with input 'True' and an empty reason string.
+Otherwise, input 'False' to indicate that the self-introduction is insufficient and provide the reason.
 """
+
 
 agent = LlmAgent(
   name="introduction_judge",

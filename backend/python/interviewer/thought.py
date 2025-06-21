@@ -2,6 +2,8 @@ import logging
 from typing_extensions import override
 from typing import AsyncGenerator, Optional
 import asyncio
+import json
+import time
 
 from google.adk.sessions import InMemorySessionService, Session
 from google.adk.runners import Runner
@@ -92,11 +94,13 @@ class ThoughtAgentSystem:
         "immediate_client_text": "",
         "phase_agent_text": "",
         "phase_client_text": "",
-        "phase_start": 0.0,
+        "phase_start": time.time(),
         "interview_questions": interview_questions,
         "question_index": 0,
         "question": "",
-        "followup_question": "",
+        "followup_questions": [],
+        "working_followup_question": "",
+        "off_topic": 0,
       }
     )
     return self.session
@@ -124,7 +128,9 @@ class ThoughtAgentSystem:
         parts=[types.Part(text="")]
       )
     ):
-      continue
+      # logging.info(event.model_dump_json(indent=2))
+      if event.is_final_response():
+        return
   
   async def update(self) -> None:
     """
@@ -132,15 +138,16 @@ class ThoughtAgentSystem:
     """
     client_message, agent_message = await self.thought_queue.read()
     state = await self.get_state()
+    logging.info(f"current state:\n{json.dumps(state, indent=2)}")
     state_delta = {
       "immediate_agent_text": agent_message,
       "immediate_client_text": client_message,
-      "phase_agent_text": state.get("phase_agent_text", "") + agent_message,
-      "phase_client_text": state.get("phase_client_text", "") + client_message,
+      "phase_agent_text": state["phase_agent_text"] + agent_message,
+      "phase_client_text": state["phase_client_text"] + client_message,
     }
     system_event = Event(
       invocation_id="conversation_update",
-      author="system",
+      author="thought_agent",
       actions=EventActions(state_delta=state_delta),
     )
     await self.runner.session_service.append_event(self.session, system_event)
