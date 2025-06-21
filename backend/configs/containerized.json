@@ -8,7 +8,7 @@
     "root_path": "",
     "cors": ["*"],
     "max_connections": 10,
-    "dev": true
+    "dev": false
   },
   "agent": {
     "name": "OwlSpeak",
