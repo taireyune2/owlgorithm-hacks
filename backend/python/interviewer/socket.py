@@ -42,26 +42,26 @@ async def handle_live_events(
     async for event in live_events:
 
       # Check for interruption
-      # if event.interrupted:
-      #   logging.info("🤐 INTERRUPTION DETECTED")
-      #   interrupted =  True
+      if event.interrupted and not interrupted:
+        logging.info("🤐 INTERRUPTION DETECTED")
+        interrupted =  True
 
       # Check for turn completion
       if event.turn_complete:
-        logging.info("✅ Gemini done talking")
-        await websocket.send_text(json.dumps({
-          "status": "open",
-          "signal": "turn_complete",
-          "mime_type": "text/plain",
-          "data": "Response completed by Gemini"
-        }))
-
-        flag = " [turn complete] " if event.turn_complete else " [interrupted] "
-        await collect_client_txt(flag)
-        await collect_agent_txt(flag)
-
+        if not interrupted:
+          logging.info("✅ Gemini done talking")
+          await websocket.send_text(json.dumps({
+            "status": "open",
+            "signal": "turn_complete",
+            "mime_type": "text/plain",
+            "data": ""
+          }))
+          flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+          await collect_client_txt(flag)
+          await collect_agent_txt(flag)
+        interrupted = False
         continue
-      
+
       # Read the types.Content and its first Part
       part: types.Part = (
         event.content and event.content.parts and event.content.parts[0]
@@ -87,13 +87,13 @@ async def handle_live_events(
         # Check if this is user or model text based on content role
         if hasattr(event.content, "role") and event.content.role == "user":
           # User text shouldn't be sent to the client
-          input_texts.append(part.text)
-          message = {
-            "status": "open",
-            "mime_type": "text/plain",
-            "data": part.text
-          }
-          await websocket.send_text(json.dumps(message))
+          # input_texts.append(part.text)
+          # message = {
+          #   "status": "open",
+          #   "mime_type": "text/plain",
+          #   "data": part.text
+          # }
+          # await websocket.send_text(json.dumps(message))
           await collect_client_txt(part.text)
           # logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
 
@@ -104,9 +104,9 @@ async def handle_live_events(
         # Check in the event string for the partial flag
         # Only process messages with "partial=True"
         if event.partial:
-          output_texts.append(part.text)
           message = {
             "status": "open",
+            "role": "agent",
             "mime_type": "text/plain",
             "data": part.text
           }

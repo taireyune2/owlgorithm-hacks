@@ -1,11 +1,10 @@
-from common import configs, logger
+from common import configs, logger, rate_limiter
 logger.setup(configs.file["logging"])
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -35,8 +34,7 @@ app.add_middleware(
 )
 
 # Set limiter into app state here
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
+app.state.limiter = rate_limiter.limiter
 app.add_middleware(SlowAPIMiddleware)
 
 @app.exception_handler(RateLimitExceeded)

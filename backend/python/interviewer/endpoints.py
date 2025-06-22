@@ -8,9 +8,8 @@ from pydantic import BaseModel
 from typing import Optional
 
 from .manager import InterviewManager
-from common import configs
+from common import configs, rate_limiter
 from starlette.requests import Request
-from service import limiter
 
 
 manager = InterviewManager(config=configs.file["agent"])
@@ -39,7 +38,7 @@ router = APIRouter(
 
 
 @router.post("/upload")
-@limiter.limit("3/minute")  # Allows only 3 requests per minute
+@rate_limiter.limiter.limit("3/minute")  # Allows only 3 requests per minute
 async def upload_material(request: Request, user_info: UserInfo):
   """
   Endpoint to upload user resume and job description.

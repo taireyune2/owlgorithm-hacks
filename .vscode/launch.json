@@ -10,7 +10,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/backend/python/service.py",
             "args": ["--config-dir", "${workspaceFolder}/backend/configs/dev.json"],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/backend/python"
         }
     ]
 }
