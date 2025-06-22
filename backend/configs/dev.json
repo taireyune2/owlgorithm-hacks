@@ -16,8 +16,8 @@
   "agent": {
     "name": "OwlSpeak",
     "voices": [
-      { "name": "Sarah", "voice": "Kore" },
-      { "name": "Emma", "voice": "Leda" },
+      { "name": "Bob", "voice": "Kore" },
+      { "name": "Jacob", "voice": "Leda" },
       { "name": "Alex", "voice": "Orus" },
       { "name": "Tim", "voice": "Charon" }
     ],
