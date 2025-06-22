@@ -14,7 +14,7 @@
     "name": "OwlSpeak",
     "voices": [
       { "name": "Bob", "voice": "Puck" },
-      { "name": "Jacob", "voice": "Leda" },
+      { "name": "Jacob", "voice": "Algenib" },
       { "name": "Alex", "voice": "Orus" },
       { "name": "Tim", "voice": "Charon" }
     ],
