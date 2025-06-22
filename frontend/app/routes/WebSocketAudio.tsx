@@ -94,7 +94,7 @@ export const WebSocketAudio = () => {
     return new Promise((resolve, reject) => {
       if (!wsUrlRef.current) return reject("No WebSocket URL");
 
-      const ws = new WebSocket(`${wsUrlRef.current}?is_audio=true`);
+      const ws = new WebSocket(`${wsUrlRef.current}`);
 
       ws.onopen = () => {
         setMessages([{ id: "status", text: "Connection opened" }]);
