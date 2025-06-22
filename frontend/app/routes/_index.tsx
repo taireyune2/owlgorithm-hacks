@@ -10,7 +10,7 @@ import { StartSessionMascot } from "./StartSessionMascot";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Behavioral Interview Assistant" },
+    { title: "Owlspeak" },
     {
       name: "description",
       content:
