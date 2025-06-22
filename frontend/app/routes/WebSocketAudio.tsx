@@ -36,6 +36,9 @@ export const WebSocketAudio = () => {
   const messagesDivRef = useRef<HTMLDivElement>(null);
   const currentMessageIdRef = useRef<string | null>(null);
   const audioPlayerNodeRef = useRef<AudioWorkletNode | null>(null);
+  const audioPlayerContextRef = useRef<AudioContext | null>(null);
+  const audioRecorderContextRef = useRef<AudioContext | null>(null);
+  const audioRecorderStreamRef = useRef<MediaStream | null>(null);
   const wsUrlRef = useRef<string>("");
 
   const [sessionIdStarted, setSessionIdStarted] = useState("");
@@ -60,6 +63,24 @@ export const WebSocketAudio = () => {
       if (audioPlayerNodeRef.current) {
         audioPlayerNodeRef.current.port.postMessage({ type: "stop" });
         audioPlayerNodeRef.current = null;
+      }
+
+      // Clean up audio contexts
+      if (audioPlayerContextRef.current) {
+        audioPlayerContextRef.current.close();
+        audioPlayerContextRef.current = null;
+      }
+      if (audioRecorderContextRef.current) {
+        audioRecorderContextRef.current.close();
+        audioRecorderContextRef.current = null;
+      }
+
+      // Stop microphone stream
+      if (audioRecorderStreamRef.current) {
+        audioRecorderStreamRef.current
+          .getTracks()
+          .forEach((track) => track.stop());
+        audioRecorderStreamRef.current = null;
       }
 
       // Close WebSocket connection
@@ -95,7 +116,7 @@ export const WebSocketAudio = () => {
     return new Promise((resolve, reject) => {
       if (!wsUrlRef.current) return reject("No WebSocket URL");
 
-      const ws = new WebSocket(`${wsUrlRef.current}`);
+      const ws = new WebSocket(`${wsUrlRef.current}?is_audio=true`);
 
       ws.onopen = () => {
         setMessages([
@@ -231,22 +252,27 @@ export const WebSocketAudio = () => {
 
       const ws = await connectWebsocket();
 
-      const [playerNode] = await startAudioPlayerWorklet((speaking) => {
-        setIsSpeaking(speaking);
-      });
-      audioPlayerNodeRef.current = playerNode;
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          const messageJson = JSON.stringify({
-            mime_type: "audio/pcm",
-            data: arrayBufferToBase64(pcmData),
-          });
-          ws.send(messageJson);
-          setMicStatus("");
+      const [playerNode, playerContext] = await startAudioPlayerWorklet(
+        (speaking) => {
+          setIsSpeaking(speaking);
         }
-      });
+      );
+      audioPlayerNodeRef.current = playerNode;
+      audioPlayerContextRef.current = playerContext;
+
+      const [recorderNode, recorderContext, recorderStream] =
+        await startAudioRecorderWorklet((pcmData: ArrayBuffer) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            const messageJson = JSON.stringify({
+              mime_type: "audio/pcm",
+              data: arrayBufferToBase64(pcmData),
+            });
+            ws.send(messageJson);
+            setMicStatus("");
+          }
+        });
+      audioRecorderContextRef.current = recorderContext;
+      audioRecorderStreamRef.current = recorderStream;
     } catch (error) {
       setMicStatus("Socket connection failed, please try again");
       setIsRecording(false);
@@ -262,6 +288,26 @@ export const WebSocketAudio = () => {
         // Send stop command to clear audio buffer
         audioPlayerNodeRef.current.port.postMessage({ type: "stop" });
         audioPlayerNodeRef.current = null;
+      }
+
+      // Clean up audio player context
+      if (audioPlayerContextRef.current) {
+        audioPlayerContextRef.current.close();
+        audioPlayerContextRef.current = null;
+      }
+
+      // Clean up audio recorder context
+      if (audioRecorderContextRef.current) {
+        audioRecorderContextRef.current.close();
+        audioRecorderContextRef.current = null;
+      }
+
+      // Stop and clean up microphone stream
+      if (audioRecorderStreamRef.current) {
+        audioRecorderStreamRef.current
+          .getTracks()
+          .forEach((track) => track.stop());
+        audioRecorderStreamRef.current = null;
       }
 
       // Close WebSocket connection
