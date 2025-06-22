@@ -78,5 +78,5 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     logging.error(traceback.format_exc())
   finally:
     await manager.disconnect(session_id)
-  logging.info(f"Interview {session_id} has been cleaned up.")
+    logging.info(f"Interview {session_id} has been cleaned up.")
 

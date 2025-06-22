@@ -89,9 +89,10 @@ class LiveAgentSystem:
     """
     Close the runner and clean up resources.
     """
-    if self.live_request_queue:
-      await self.live_request_queue.close()
-    await self.runner.close()
+    if isinstance(self.live_request_queue, LiveRequestQueue):
+      self.live_request_queue.close()
+    if isinstance(self.runner, InMemoryRunner):
+      await self.runner.close()
 
   def get_run_configs(self, voice: str) -> RunConfig:
     return RunConfig(
