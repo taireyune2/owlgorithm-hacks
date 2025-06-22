@@ -138,7 +138,10 @@ class ThoughtAgentSystem:
     """
     client_message, agent_message = await self.thought_queue.read()
     state = await self.get_state()
-    logging.info(f"current state:\n{json.dumps(state, indent=2)}")
+    printable = {k: state[k] for k in state if k not in [
+      "interviewer_name", "interviewer_background", "resume", "interview_instructions", "job_description"
+    ]}
+    logging.info(f"current state:\n{json.dumps(printable, indent=2)}")
     state_delta = {
       "immediate_agent_text": agent_message,
       "immediate_client_text": client_message,

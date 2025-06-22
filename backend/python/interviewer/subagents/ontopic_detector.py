@@ -53,11 +53,12 @@ Respond ONLY in valid JSON format following this schema:
 Do NOT include any explanations, context, or text outside of this JSON object.
 """
 
-def after_model_callback(callback_context: CallbackContext, response: LlmResponse) -> Optional[LlmResponse]:
+def after_model_callback(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
   """
   Callback to handle the response from the agent.
   """
-  result = json.loads(response.content.parts[0].text)
+  logging.info(llm_response.model_dump_json(indent=2))
+  result = json.loads(llm_response.content.parts[0].text)
   if result.get("on_topic", False):
     callback_context.state["off_topic"] = 0
   else:

@@ -99,36 +99,35 @@ class InterviewRound:
       await self.live.close()
 
   async def run(self, websocket: WebSocket) -> None:
-    try:
-      await websocket.accept()
+    # try:
+    await websocket.accept()
 
-      async with asyncio.TaskGroup() as tg:
-        handle_live_events_task = tg.create_task(
-          socket.handle_live_events(
-            self.live.live_events, 
-            websocket, 
-            self.thought.put_client_message, 
-            self.thought.put_agent_message
-          )
+    async with asyncio.TaskGroup() as tg:
+      handle_live_events_task = tg.create_task(
+        socket.handle_live_events(
+          self.live.live_events, 
+          websocket, 
+          self.thought.put_client_message, 
+          self.thought.put_agent_message
         )
-        handle_inbound_messages_task = tg.create_task(
-          socket.client_to_agent_messaging(
-            websocket, 
-            self.live.live_request_queue,
-            None, 3,
-          )
+      )
+      handle_inbound_messages_task = tg.create_task(
+        socket.client_to_agent_messaging(
+          websocket, 
+          self.live.live_request_queue,
+          None, 3,
         )
-        update_thought_task = tg.create_task(self._update_thought())
+      )
+      update_thought_task = tg.create_task(self._update_thought())
       
-    except WebSocketDisconnect as e:
-      logging.info(f"⚠️ WebSocket disconnected before tasks started for session {self.session_id}")
-      raise e
-    except Exception as e:
-      logging.error(f"⚠️ Unhandled error in run: {e}")
-      logging.error(traceback.format_exc())
-      raise e
+    # except WebSocketDisconnect as e:
+    #   logging.info(f"⚠️ WebSocket disconnected before tasks started for session {self.session_id}")
+    #   raise e
+    # except Exception as e:
+    #   logging.error(f"⚠️ Unhandled error in run: {e}")
+    #   logging.error(traceback.format_exc())
+    #   raise e
 
-    
   async def _update_thought(self) -> None:
     """
     Update the thought agent with new messages.

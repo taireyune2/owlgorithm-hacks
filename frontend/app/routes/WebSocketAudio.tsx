@@ -355,7 +355,7 @@ export const WebSocketAudio = () => {
       </div>
       <div
         ref={messagesDivRef}
-        className="flex flex-col border border-gray-300 rounded p-2 overflow-y-auto bg-gray-50 text-sm mx-auto h-[400px]"
+        className="flex flex-col border border-gray-300 rounded p-2 overflow-y-auto bg-gray-50 text-sm mx-auto h-[288px]"
       >
         <div>
           {messages.map((msg) => (

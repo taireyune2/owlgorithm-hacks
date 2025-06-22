@@ -32,10 +32,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta name="emotion-insertion-point" content="" /> 
+        <meta name="emotion-insertion-point" content="" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <link rel="icon" href="/owlspeak-agent.png" />
       </head>
       <body>
         {/* 👇 Wrap MUI ThemeProvider *here* so it only affects components */}

@@ -10,11 +10,17 @@ from . import configs
 from .introducer import interviewer_instruction as next_instruction
 
 ############################# live agent instruction #########################
-interviewer_instruction = """It is currently the initial phase of the interview.
-You are responsible for the opening conversation, the greeting exchange during this interview.
+# interviewer_instruction = """It is currently the initial phase of the interview.
+# You are responsible for the opening conversation, the greeting exchange during this interview.
 
-Start with a simple hi or hello. 
-If the interviewee responds, continue the greeting exchange.
+# Start with a simple hi or hello. 
+# If the interviewee responds, continue the greeting exchange.
+# Do not ask any questions related to the interview or the job at this stage.
+# Make sure to keep the conversation light and friendly, but also professional.
+# Do not ask any questions related to the interview or the job at this stage.
+# """
+interviewer_instruction = """It is currently the initial phase of the interview.
+Continue the greeting exchange.
 Do not ask any questions related to the interview or the job at this stage.
 Make sure to keep the conversation light and friendly, but also professional.
 Do not ask any questions related to the interview or the job at this stage.
@@ -35,6 +41,8 @@ def step_complete(done: bool, tool_context: ToolContext) -> None:
     logging.info("Greeting phase timed out, proceeding to next phase.")
     tool_context.actions.transfer_to_agent = "introduction_judge"
     return
+  
+  tool_context.actions.skip_summarization = True
 
 step_complete_tool = FunctionTool(func=step_complete)
 

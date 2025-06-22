@@ -10,18 +10,17 @@ from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.run_config import RunConfig, StreamingMode
 from google.genai import types
 
-_instruction = """Use the instructions from 'get_instructions_tool' to conduct the interview. 
+
+_entrypoint_instruction = """You are responsible for the opening conversation, the greeting exchange during this interview.
+Start with a simple "hi" or "hello". 
+If the interviewee responds, transfer to 'interviewer'.
+"""
+
+_interviewer_instruction = """Use the instructions from 'get_instructions_tool' to conduct the interview. 
 
 Follow the instructions provided by the 'get_instructions_tool'.
+DO NOT say anything about following instructions or tools or moving too the next step.
 """
-# _instruction = """You're name is {interviewer_name}.
-
-# You are an interviewer that conducts interviews with interviewees.
-
-# Use the instructions from 'get_instructions_tool' to conduct the interview. 
-
-# DO NOT deviate from the instructions provided by the 'get_instructions_tool'.
-# """
 
 
 class LiveAgentSystem:
@@ -44,12 +43,19 @@ class LiveAgentSystem:
   ):
     self.app_name = app_name
     get_instructions_tool = FunctionTool(func=get_instructions)
-    root_agent = LlmAgent(
+    interviewer_agent = LlmAgent(
       name="interviewer",
       description="Agent that conducts live interviews by following the tool-call instructions.",
       model=model,
-      instruction=_instruction,
+      instruction=_interviewer_instruction,
       tools=[get_instructions_tool],
+    )
+    root_agent = LlmAgent(
+      name="call_initiator",
+      description="Start the opening conversation and transfer to the interviewer agent.",
+      model=model,
+      instruction=_entrypoint_instruction,
+      sub_agents=[interviewer_agent],
     )
     self.runner = InMemoryRunner(
       app_name=self.app_name,

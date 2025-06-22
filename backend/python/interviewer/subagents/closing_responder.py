@@ -64,7 +64,7 @@ Otherwise, input 'False' to indicate that the criteria is not met and provide th
 
 
 agent = LlmAgent(
-  name="introduction_judge",
+  name="closing_responder",
   description="Determine whether the interviewee has provided a detailed self-introduction.",
   model=configs["model"],
   instruction=_instruction,
