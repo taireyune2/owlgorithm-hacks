@@ -20,7 +20,7 @@ Here is the follow-up question: {followup_question}
 
 If the interviewee asks for clarification, please rephrase the question.
 If the interviewee has started answering the question, DO NOT interrupt them.
-You are ONLY to respond with affirmations like "tell me more", "uh-huh", "hmm", or "nice" when the interviewee is providing their response.
+You are ONLY to respond with affirmations like "tell me more", OR "okay", OR "nice" when the interviewee pause during their response.
 """
 
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
@@ -28,13 +28,13 @@ def before_agent_callback(callback_context: CallbackContext) -> Optional[types.C
     ### setup state and instructions
     callback_context.state["phase"] = "followup_question"
 
-  questions = callback_context.state["followup_questions"]
-  if len(questions) > 0:
-    callback_context.state["interview_instructions"] = interviewer_instruction.format(
-      followup_question=questions[-1]
-    )
-  else:
-    raise ValueError("No follow-up questions available in the state.")
+    questions = callback_context.state["followup_questions"]
+    if len(questions) > 0:
+      callback_context.state["interview_instructions"] = interviewer_instruction.format(
+        followup_question=questions[-1]
+      )
+    else:
+      raise ValueError("No follow-up questions available in the state.")
 
 
 ################################ thought agent - state manager #####################################

@@ -36,14 +36,13 @@ def setup(configs: dict) -> logging.Logger:
     handlers.append(console_handler)
 
   if "file" in configs:
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    file_handler = logging.handlers.TimedRotatingFileHandler(
-      os.path.join(base_dir, configs['file']['path'], configs['env'] + ".log"),
-      when="midnight",
+    file_handler = logging.handlers.RotatingFileHandler(
+      os.path.join(configs["file"]["path"], f"{configs['env']}.log"), 
       backupCount=7,
     )
     file_handler.setFormatter(log_format)
     handlers.append(file_handler)
+    file_handler.doRollover()
 
   ### setup queue handler
   log_queue = Queue(-1) 

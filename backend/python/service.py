@@ -40,11 +40,11 @@ app.add_middleware(SlowAPIMiddleware)
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
   return JSONResponse(
-      status_code=429,
-      content={
-          "status": "failure",
-          "message": "Too many requests! Please try again later."
-      }
+    status_code=429,
+    content={
+        "status": "failure",
+        "message": "Too many requests! Please try again later."
+    }
   )
 
 
