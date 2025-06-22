@@ -56,9 +56,9 @@ async def handle_live_events(
             "mime_type": "text/plain",
             "data": ""
           }))
-          # flag = " [turn complete] " if event.turn_complete else " [interrupted] "
-          # await collect_client_txt(flag)
-          # await collect_agent_txt(flag)
+          flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+          await collect_client_txt(flag)
+          await collect_agent_txt(flag)
         interrupted = False
         continue
 
