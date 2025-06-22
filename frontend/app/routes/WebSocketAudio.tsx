@@ -10,6 +10,7 @@ import { Alert, Button } from "@mui/material";
 interface Message {
   id: string;
   text: string;
+  role?: "user" | "agent" | "system";
 }
 
 // Get environment variables with fallbacks
@@ -25,7 +26,7 @@ export const WebSocketAudio = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [micStatus, setMicStatus] = useState("");
   const [uploadFailed, setUploadFailed] = useState("");
-  const [signal, setSignal] = useState("");
+  const [role, setRole] = useState("");
   const [wsStatus, setWsStatus] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [websocket, setWebsocket] = useState<WebSocket | null>(null);
@@ -97,13 +98,15 @@ export const WebSocketAudio = () => {
       const ws = new WebSocket(`${wsUrlRef.current}`);
 
       ws.onopen = () => {
-        setMessages([{ id: "status", text: "Connection opened" }]);
+        setMessages([
+          { id: "status", text: "Connection opened", role: "system" },
+        ]);
         resolve(ws);
       };
 
       ws.onmessage = (event) => {
         const message_from_server = JSON.parse(event.data);
-        setSignal(message_from_server.signal);
+
         setWsStatus(message_from_server.status);
 
         if (message_from_server.turn_complete) {
@@ -134,14 +137,21 @@ export const WebSocketAudio = () => {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === currentMessageIdRef.current
-                ? { ...msg, text: msg.text + message_from_server.data }
+                ? {
+                    ...msg,
+                    text: msg.text + message_from_server.data,
+                    role: "agent",
+                  }
                 : msg
             )
           );
 
           // Add breakline if this is the "Response completed by Gemini" message
           if (message_from_server.signal === "turn_complete") {
-            setMessages((prev) => [...prev, { id: "newline", text: "\n" }]);
+            setMessages((prev) => [
+              ...prev,
+              { id: "newline", text: "\n", role: "system" },
+            ]);
             currentMessageIdRef.current = null;
           }
 
@@ -169,7 +179,7 @@ export const WebSocketAudio = () => {
 
         setMessages((prev) => [
           ...prev,
-          { id: "status", text: "Connection closed" },
+          { id: "status", text: "Connection closed", role: "system" },
         ]);
         setIsSpeaking(false);
       };
@@ -308,7 +318,17 @@ export const WebSocketAudio = () => {
               {msg.id === "newline" ? (
                 <div className="h-6 bg-slate-100"></div>
               ) : (
-                <p>{msg.text}</p>
+                <div
+                  className={`${
+                    msg.role === "system"
+                      ? "bg-gray-200 text-gray-800 italic h-8 items-center flex justify-center"
+                      : msg.role === "agent"
+                        ? "bg-blue-100 text-blue-800 font-normal py-4"
+                        : "bg-green-100 text-green-800 font-normal py-4"
+                  }`}
+                >
+                  {msg.text}
+                </div>
               )}
             </div>
           ))}
