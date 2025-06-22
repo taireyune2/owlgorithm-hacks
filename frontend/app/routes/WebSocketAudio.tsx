@@ -327,10 +327,10 @@ export const WebSocketAudio = () => {
         Live Audio Chat
       </h2>
 
-      <div className="flex gap-4 mb-4">
+      <div className="flex gap-8 mb-4">
         <Button
           onClick={handleStartAudio}
-          sx={{ width: 200 }}
+          sx={{ width: 300 }}
           disabled={wsStatus == "open"}
           variant="contained"
           color={isRecording ? "success" : "primary"}
@@ -340,11 +340,10 @@ export const WebSocketAudio = () => {
 
         <Button
           variant="contained"
-          sx={{ width: 200 }}
+          sx={{ width: 300 }}
           disabled={!isRecording}
           color="secondary"
           onClick={handleEndAudio}
-          className="flex-1 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors duration-200"
         >
           End
         </Button>
