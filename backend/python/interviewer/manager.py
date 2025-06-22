@@ -28,6 +28,7 @@ class InterviewManager:
     if session_id in self.interviews:
       logging.warning(f"Session {session_id} already exists. Overwriting existing interview round.")
       self.disconnect(session_id)
+      raise ValueError(f"Clearing interview session '{session_id}', please try again")
     
     interview = InterviewRound(
       configs=self.config,
