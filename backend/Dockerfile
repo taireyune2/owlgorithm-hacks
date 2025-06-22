@@ -1,16 +1,19 @@
 FROM python:3.12-alpine
 
 ### install requirements
-WORKDIR /interview-agent
-COPY requirements.txt requirements.txt
+COPY requirements.txt /home/service/requirements.txt
+WORKDIR /home/service
 RUN pip install -r requirements.txt
+RUN rm /home/service/requirements.txt
 
 ### modifying adk source code
 COPY configs/functions.py /usr/local/lib/python3.12/site-packages/google/adk/flows/llm_flows/functions.py
 
 ### copy source code
-COPY . .
-ENV PYTHONPATH=/interview-agent/python
+COPY python/ /home/service/python
+COPY python/.container /home/service/python/.env
+COPY configs/containerized.json /home/service/configs/containerized.json
+WORKDIR /home/service/python
 
 ### run
 CMD ["uvicorn", "service:app", "--host", "0.0.0.0", "--port", "8080"]
