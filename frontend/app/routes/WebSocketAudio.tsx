@@ -166,6 +166,14 @@ export const WebSocketAudio = () => {
                 : msg
             )
           );
+          
+          if (message_from_server.role === "system") {
+            setMessages((prev) => [
+              ...prev,
+              { id: "status", text: message_from_server.data, role: "system" }
+            ]);
+            currentMessageIdRef.current = null;
+          }
 
           // Add breakline if this is the "Response completed by Gemini" message
           if (message_from_server.signal === "turn_complete") {

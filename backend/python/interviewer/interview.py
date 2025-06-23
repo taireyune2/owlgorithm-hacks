@@ -42,6 +42,7 @@ class InterviewRound:
   
     self.thought = None
     self.live = None
+    self.idle_socket_duration = 0
 
   async def start_thought_session(
     self, *,
@@ -118,7 +119,7 @@ class InterviewRound:
           None, 3,
         )
       )
-      update_thought_task = tg.create_task(self._update_thought())
+      update_thought_task = tg.create_task(self._update_thought(websocket))
       
     # except WebSocketDisconnect as e:
     #   logging.info(f"⚠️ WebSocket disconnected before tasks started for session {self.session_id}")
@@ -128,7 +129,7 @@ class InterviewRound:
     #   logging.error(traceback.format_exc())
     #   raise e
 
-  async def _update_thought(self) -> None:
+  async def _update_thought(self, websocket: WebSocket) -> None:
     """
     Update the thought agent with new messages.
     """
@@ -137,5 +138,36 @@ class InterviewRound:
       await asyncio.sleep(REFRESH_INTERVAL)
       await self.thought.update()
       await self.thought.run()
+      await self.close_idle_socket(websocket, 90)
       # TODO: push system message into the request queue
+
+  async def close_idle_socket(self, websocket: WebSocket, max_idle_duration_allowed: int) -> None:
+    
+    state = await self.thought.get_state()
+    immediate_client_message = state.get("immediate_client_text", "")
+    if immediate_client_message and immediate_client_message.strip():
+      self.idle_socket_duration = 0
+    else:
+      self.idle_socket_duration += 10
+
+    if self.idle_socket_duration > 0 and self.idle_socket_duration < max_idle_duration_allowed and self.idle_socket_duration % 30 == 0:
+      remaining = max_idle_duration_allowed - self.idle_socket_duration
+      print(f"Socket remaining time is: {remaining} ")
+      await websocket.send_text(json.dumps({
+        "status": "open",
+        "role": "system",
+        "mime_type": "text/plain",
+        "data": f"Socket will be closed in {remaining} seconds"
+      }))
+    # Close connection if exceeded max idle duration
+    elif self.idle_socket_duration > max_idle_duration_allowed:
+      await websocket.send_text(json.dumps({
+        "status": "closed",
+        "signal": "close_socket",
+        "mime_type": "text/plain",
+        "data": ""
+      }))
+      raise WebSocketDisconnect()
+
+    
 
