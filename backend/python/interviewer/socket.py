@@ -132,13 +132,6 @@ async def handle_live_events(
         # Check if this is user or model text based on content role
         if hasattr(event.content, "role") and event.content.role == "user":
           # We send user's text immediately because the user should see his text as the user speaks
-          message = {
-            "status": "open",
-            "role": "user",
-            "mime_type": "text/plain",
-            "data": part.text
-          }
-          await websocket.send_text(json.dumps(message))
           await collect_client_txt(part.text)
           logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
 
