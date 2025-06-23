@@ -139,7 +139,6 @@ class InterviewRound:
       await self.thought.update()
       await self.thought.run()
       await self.close_idle_socket(websocket, 90)
-      # TODO: push system message into the request queue
 
   async def close_idle_socket(self, websocket: WebSocket, max_idle_duration_allowed: int) -> None:
     
