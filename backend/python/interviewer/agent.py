@@ -66,6 +66,7 @@ class InterviewerAgent(BaseAgent):
     """
     Deterministic control flow for other interview agents
     """
+    # while True:
     if ctx.session.state["phase"] == "greeting":
       async for event in self.greeter.run_async(ctx):
         yield event

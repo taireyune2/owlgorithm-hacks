@@ -57,34 +57,28 @@ def after_model_callback(callback_context: CallbackContext, llm_response: LlmRes
   """
   Callback to handle the response from the agent.
   """
-  logging.info(llm_response.model_dump_json(indent=2))
+  # logging.info(llm_response.model_dump_json(indent=2))
+  
   result = json.loads(llm_response.content.parts[0].text)
+  logging.info(f"Handle on-topic detection response. {result}")
   if result.get("on_topic", False):
     callback_context.state["off_topic"] = 0
   else:
     callback_context.state["off_topic"] += 1
     logging.info(f"Off-topic count increased with reason: {result.get('explanation', 'No explanation provided')}")
 
-
-ontopic_detector_first = LlmAgent(
-  name="ontopic_detector_1", 
-  description="Detect whether the user response is on-topic.",
-  model=configs["model"],
-  instruction=_instruction,
-  after_model_callback=after_model_callback,
-  output_schema=OnTopicJudgement,  
-  disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True,
-  include_contents='none',
-)
-ontopic_detector_second = LlmAgent(
-  name="ontopic_detector_2", 
-  description="Detect whether the user response is on-topic.",
-  model=configs["model"],
-  instruction=_instruction,
-  after_model_callback=after_model_callback,
-  output_schema=OnTopicJudgement,  
-  disallow_transfer_to_parent=True,
-  disallow_transfer_to_peers=True,
-  include_contents='none',
-)
+def init_ontopic_agent(name: str) -> LlmAgent:
+  """
+  Initialize an on-topic detection agent with the given name.
+  """
+  return LlmAgent(
+    name=name,
+    description="Detect whether the user response is on-topic.",
+    model=configs["model"],
+    instruction=_instruction,
+    after_model_callback=after_model_callback,
+    output_schema=OnTopicJudgement,  
+    disallow_transfer_to_parent=True,
+    disallow_transfer_to_peers=True,
+    include_contents='none',
+  )

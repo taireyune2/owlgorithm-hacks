@@ -1,16 +1,21 @@
 from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.callback_context import CallbackContext
+
 from google.genai import types
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, override
+
+from pydantic import BaseModel, Field
 
 import logging
 import time
 
 from . import configs
 
-from .common import question_generator_first, route_interview
-from .ontopic_detector import ontopic_detector_first
+from .common import (
+  init_question_generator, RoutingAgent, JudgeResult
+)
+from .ontopic_detector import init_ontopic_agent
 
 ##################################### live agent instructions #####################################
 interviewer_instruction = """It is currently the main behavioral question phase of the interview.
@@ -25,38 +30,14 @@ You are ONLY to respond with affirmations like "tell me more", OR "okay", OR "ni
 
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
   logging.info("Entering behavioral question phase callback.")
-  if callback_context.state["phase"] != "behavioral_question":
-    ### setup states
-    callback_context.state["phase_start"] = time.time()
-    callback_context.state["phase"] = "behavioral_question"
-    question = callback_context.state["interview_questions"][callback_context.state["question_index"]]
-    callback_context.state["question"] = question
-    callback_context.state["interview_instructions"] = interviewer_instruction.format(
-      behavioral_question=question
-    )
+  callback_context.state["judge_result"] = {}
+  callback_context.state["interview_instructions"] = interviewer_instruction.format(
+    behavioral_question=callback_context.state["question"]
+  )
+  return None
 
-    ### clear previous phase context
-    callback_context.state["phase_client_text"] = ""
-    callback_context.state["phase_agent_text"] = ""
 
-##################### thought agent - state manager #####################################
-def criteria_met(met: bool, reason: str, tool_context: ToolContext) -> None:
-  """
-  Progress the conversation to the next phase.
-  """
-  if met:
-    logging.info("Criteria met, proceeding to next phase.")
-    return route_interview(tool_context)
-
-  logging.info(f"timings: { time.time() - tool_context.state['phase_start']} and {configs['durations']['behavioral']}")
-  if time.time() - tool_context.state["phase_start"] > configs["durations"]["behavioral"]:
-    logging.info("Behavioral question phase timed out, proceeding to next phase.")
-    return route_interview(tool_context)
-    
-  tool_context.actions.skip_summarization = True
-
-criteria_met_tool = FunctionTool(func=criteria_met)
-
+########################## thought agent - answer judge #####################################
 _instruction = """You are an answer judge.
 You are responsible for determining whether the interviewee has provided a detailed response to the behavioral question.
 Here is the question: {question}
@@ -66,23 +47,30 @@ Here is the response:
 {phase_client_text}
 [end_interviewee]
 
-To meet the criteria, the response should at least 100 words and provide a detailed answer to the question.
+To meet the criteria, the response should at least 50 words and provide a detailed answer to the question.
+ 
+If the interviewee's response meets the criteria, return true with an empty reason string.
+Otherwise, return false with a reason string explaining why the criteria are not met.
 
-Tool call 'criteria_met_tool': 
-If the interviewee's response meets the criteria, call the 'criteria_met_tool' with input 'True' and an empty reason.
-Otherwise, call the 'criteria_met_tool' with input 'False' to indicate that the response is insufficient and provide the reason.
-
-Arguments for 'criteria_met_tool':
-- met: A boolean indicating whether the criteria are met.
-- reason: A string explaining why the criteria are not met, if applicable.
+Respond ONLY in valid JSON format following this schema:
+```json
+{
+  "met": bool,
+  "explanation": str (If false, brief explanation of why the criteria are not met)"
+}
+```
 """
 
 answer_judge = LlmAgent(
   name="answer_judge",
   description="Judge the interviewee's answers to behavioral questions.",
   model=configs["model"],
+  # before_agent_callback=[before_agent_callback],
   instruction=_instruction,
-  tools=[criteria_met_tool], 
+  output_schema=JudgeResult,
+  output_key="judge_result",
+  disallow_transfer_to_parent=True,
+  disallow_transfer_to_peers=True,
   include_contents='none',
   generate_content_config=types.GenerateContentConfig(
     temperature=0.0
@@ -90,13 +78,26 @@ answer_judge = LlmAgent(
 )
 
 ##################### thought agent - workflow #####################################
-agent = ParallelAgent(
+parallel_agent = ParallelAgent(
+  name="behavioral_parallel_agent", #"behavioral_questioner",
+  description="Agent that manages the tasks during the behavioral question phase of the interview.",
+  sub_agents=[
+    answer_judge,
+    init_question_generator("behavioral_question_generator"),
+    # init_ontopic_agent("behavioral_ontopic_agent"),
+  ],
+)
+
+routing_agent = RoutingAgent(
+  name="behavioral_routing_agent",
+  interviewer_instruction=interviewer_instruction
+)
+
+agent = SequentialAgent(
   name="behavioral_questioner",
   description="Agent that manages the behavioral question phase of the interview.",
   sub_agents=[
-    answer_judge,
-    question_generator_first,
-    ontopic_detector_first
+    parallel_agent,
+    routing_agent,
   ],
-  before_agent_callback=[before_agent_callback],
 )

@@ -12,6 +12,7 @@ from google.genai import types
 
 from .agent import root_agent
 from .subagents.greeter import interviewer_instruction
+from .subagents.overviewer import interviewer_instruction
 
 ############################ Run ######################################
 class ThoughtQueue:
@@ -88,7 +89,8 @@ class ThoughtAgentSystem:
         "resume": resume,
         "job_description": job_description,
         "interviewer_background": interviewer_background,
-        "phase": "greeting",
+        # "phase": "greeting",
+        "phase": "overview",
         "interview_instructions": interviewer_instruction,
         "immediate_agent_text": "",
         "immediate_client_text": "",

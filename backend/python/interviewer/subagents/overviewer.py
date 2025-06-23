@@ -8,6 +8,7 @@ import logging
 import time
 
 from . import configs
+from .behavioral_questioner import interviewer_instruction as behavioral_questioner_instruction
 
 
 ############################### live agent instructions ##############################
@@ -33,24 +34,30 @@ def before_agent_callback(callback_context: CallbackContext) -> Optional[types.C
 
 
 ############################### thought agent ###############################
-NEXT_STEP_AGENT = "behavioral_questioner"
-
 def next_step(met: bool, tool_context: ToolContext) -> None:
   """
   Progress the conversation to the next phase.
   """
-  if met:
-    logging.info("Criteria met, proceeding to next phase.")
-    tool_context.actions.transfer_to_agent = NEXT_STEP_AGENT
+  timed_out = time.time() - tool_context.state["phase_start"] > configs["durations"]["overview"]
+  logging.info(f"Criteria met: {met}, Timed out: {timed_out}")
+  if not met and not timed_out:
+    tool_context.actions.skip_summarization = True
     return
 
-  if time.time() - tool_context.state["phase_start"] > configs["durations"]["overview"]:
-    logging.info("Overview phase timed out, proceeding to next phase.")
-    tool_context.actions.transfer_to_agent = NEXT_STEP_AGENT
-    return
+  logging.info(f"Moving to behavioral phase.")
+  question = tool_context.state["interview_questions"][tool_context.state["question_index"]],
+  tool_context.state["phase"] = "behavioral_question"
+  tool_context.state["phase_start"] = time.time()
+  tool_context.state["phase_client_text"] = ""
+  tool_context.state["phase_agent_text"] = ""
+  tool_context.state["question"] = question
+  tool_context.state["judge_result"] = {}
+  tool_context.state["interview_instructions"] = behavioral_questioner_instruction.format(
+    behavioral_question=question
+  )
+  tool_context.actions.transfer_to_agent = "behavioral_questioner"
+
   
-  tool_context.actions.skip_summarization = True
-
 next_step_tool = FunctionTool(func=next_step)
 
 _instruction = """You are responsible for deciding if the interview can proceed.
