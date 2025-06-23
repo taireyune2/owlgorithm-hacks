@@ -53,43 +53,43 @@ async def handle_live_events(
       if event.turn_complete:
         if not interrupted:
 
-          if not beginning:
-            # Make a new line because the user has done speaking. It's the agent's speech
-            await websocket.send_text(json.dumps({
-              "status": "open",
-              "signal": "turn_complete",
-              "mime_type": "text/plain",
-              "data": ""
-            }))
-          beginning = False
+          # if not beginning:
+          #   # Make a new line because the user has done speaking. It's the agent's speech
+          #   await websocket.send_text(json.dumps({
+          #     "status": "open",
+          #     "signal": "turn_complete",
+          #     "mime_type": "text/plain",
+          #     "data": ""
+          #   }))
+          # beginning = False
           
           # Send agent's text data
-          while True:
-            try:
-              item = agent_output_text.get_nowait()
-              agent_output_text.task_done() 
-              message = {
-                "status": "open",
-                "role": "agent",
-                "mime_type": "text/plain",
-                "data": item
-              }
-              await websocket.send_text(json.dumps(message))
-            except asyncio.QueueEmpty:
-              break
-          # Send agent's audio data
-          while True:
-            try:
-              item = agent_output_audio.get_nowait()
-              agent_output_audio.task_done()
-              message = {
-                "status": "open",
-                "mime_type": "audio/pcm",
-                "data": item
-              }
-              await websocket.send_text(json.dumps(message))
-            except asyncio.QueueEmpty:
-              break
+          # while True:
+          #   try:
+          #     item = agent_output_text.get_nowait()
+          #     agent_output_text.task_done() 
+          #     message = {
+          #       "status": "open",
+          #       "role": "agent",
+          #       "mime_type": "text/plain",
+          #       "data": item
+          #     }
+          #     await websocket.send_text(json.dumps(message))
+          #   except asyncio.QueueEmpty:
+          #     break
+          # # Send agent's audio data
+          # while True:
+          #   try:
+          #     item = agent_output_audio.get_nowait()
+          #     agent_output_audio.task_done()
+          #     message = {
+          #       "status": "open",
+          #       "mime_type": "audio/pcm",
+          #       "data": item
+          #     }
+          #     await websocket.send_text(json.dumps(message))
+          #   except asyncio.QueueEmpty:
+          #     break
 
           logging.info("✅ Gemini done talking")
 
@@ -100,9 +100,9 @@ async def handle_live_events(
             "mime_type": "text/plain",
             "data": ""
           }))
-          # flag = " [turn complete] " if event.turn_complete else " [interrupted] "
-          # await collect_client_txt(flag)
-          # await collect_agent_txt(flag)
+          flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+          await collect_client_txt(flag)
+          await collect_agent_txt(flag)
         interrupted = False
         continue
 
@@ -119,7 +119,13 @@ async def handle_live_events(
       if is_audio:
         audio_data = part.inline_data and part.inline_data.data
         if audio_data:
-          await agent_output_audio.put(base64.b64encode(audio_data).decode("ascii"))
+          # await agent_output_audio.put(base64.b64encode(audio_data).decode("ascii"))
+          message = {
+            "status": "open",
+            "mime_type": "audio/pcm",
+            "data": base64.b64encode(audio_data).decode("ascii")
+          }
+          await websocket.send_text(json.dumps(message))
 
       # Process text content
       if part.text:
@@ -139,7 +145,14 @@ async def handle_live_events(
         # We get streaming chunks with "partial=True" followed by a final consolidated
         # response with "partial=None" containing the complete text so we only process messages with "partial=True"
         if event.partial:
-          await agent_output_text.put(part.text)
+          # await agent_output_text.put(part.text)
+          message = {
+            "status": "open",
+            "role": "agent",
+            "mime_type": "text/plain",
+            "data": part.text
+          }
+          await websocket.send_text(json.dumps(message))
           await collect_agent_txt(part.text)
           # logging.info(f"[AGENT TO CLIENT]: text/plain: {message}")
 
