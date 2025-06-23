@@ -9,7 +9,7 @@ import time
 from . import configs
 
 from .common import question_generator_second, route_interview
-from .ontopic_detector import ontopic_detector
+from .ontopic_detector import ontopic_detector_second
 
 ############################# live agent instructions ##############################
 interviewer_instruction = """It is currently the followup question part of the interview.
@@ -96,7 +96,7 @@ agent = ParallelAgent(
   sub_agents=[
     followup_judge,
     question_generator_second, 
-    ontopic_detector,
+    ontopic_detector_second,
   ],
   before_agent_callback=[before_agent_callback],
 )

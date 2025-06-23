@@ -10,7 +10,7 @@ from . import configs
 
 ############################## live agent instructions ##############################
 interviewer_instruction = """It is currently the introduction phase of the interview.
-In this phase, you are responsible for providing a self-introduction to the interviewee and then asking them to provide a self-introduction.
+In this phase, you are responsible for providing your background to the interviewee and then asking them to provide a self-introduction.
 Here is your background information:
 {interviewer_background}
 Keep it professional, humble, and concise. 

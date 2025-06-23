@@ -1,4 +1,4 @@
-from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
 from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
@@ -10,6 +10,7 @@ import time
 from . import configs
 
 from .common import question_generator_first, route_interview
+from .ontopic_detector import ontopic_detector_first
 
 ##################################### live agent instructions #####################################
 interviewer_instruction = """It is currently the main behavioral question phase of the interview.
@@ -95,6 +96,7 @@ agent = ParallelAgent(
   sub_agents=[
     answer_judge,
     question_generator_first,
+    ontopic_detector_first
   ],
   before_agent_callback=[before_agent_callback],
 )

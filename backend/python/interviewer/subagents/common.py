@@ -3,6 +3,7 @@ from google.adk.tools import ToolContext, FunctionTool
 from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
 from typing import AsyncGenerator, Optional
+from pydantic import BaseModel, Field
 
 import logging
 import time
@@ -37,12 +38,16 @@ def route_interview(ctx: ToolContext) -> None:
 def before_agent_callback(callback_context: CallbackContext) -> Optional[types.Content]:
   ### skip this if there is not enough content
   content = callback_context.state["phase_client_text"]
-  if len(content) < 200:
+  if len(content) < 50:
     logging.info("Too early to generate follow-up question, waiting for more response.")
     return types.Content(
       role="model",
       parts=[types.Part(text="")],
     )
+
+class FollowupQuestion(BaseModel):
+  question: str = Field(description="The follow-up question to be generated based on the interviewee's response.")
+
 
 _instruction = """You are a question asker.
 You are responsible for generating questions based on the user's behavioral response.
@@ -55,13 +60,13 @@ Here is the response from the interviewee:
 {phase_client_text}
 [end_interviewee]
 
-Based on this response, what question can the interviewer ask as a followup?
-Ask a question that is relevant to the response and encourages the interviewee to either:
+Based on this response, ask the interviewee a followup question.
+Ask a question that is relevant to the interviewee's response and encourages the interviewee to either:
 - elaborate further, 
 - clarify any points, 
 - or provide specific examples.
 
-Only write down the question you came up with without other comments. 
+Only write down the new followup question. Do not include any additional text or explanations. 
 DO NOT repeat the previous follow-up question.
 DO NOT include any additional discussion in your response.
 """
@@ -86,6 +91,7 @@ question_generator_second = LlmAgent(
   instruction=_instruction,
   before_agent_callback=[before_agent_callback],
   include_contents='none',
+  output_schema=FollowupQuestion,
   output_key="working_followup_question",
   generate_content_config=types.GenerateContentConfig(
     temperature=2.0

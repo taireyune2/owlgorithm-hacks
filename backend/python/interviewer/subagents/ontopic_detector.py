@@ -66,8 +66,19 @@ def after_model_callback(callback_context: CallbackContext, llm_response: LlmRes
     logging.info(f"Off-topic count increased with reason: {result.get('explanation', 'No explanation provided')}")
 
 
-ontopic_detector = LlmAgent(
-  name="ontopic_detector", 
+ontopic_detector_first = LlmAgent(
+  name="ontopic_detector_1", 
+  description="Detect whether the user response is on-topic.",
+  model=configs["model"],
+  instruction=_instruction,
+  after_model_callback=after_model_callback,
+  output_schema=OnTopicJudgement,  
+  disallow_transfer_to_parent=True,
+  disallow_transfer_to_peers=True,
+  include_contents='none',
+)
+ontopic_detector_second = LlmAgent(
+  name="ontopic_detector_2", 
   description="Detect whether the user response is on-topic.",
   model=configs["model"],
   instruction=_instruction,
