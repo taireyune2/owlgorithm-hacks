@@ -138,18 +138,19 @@ class InterviewRound:
       await asyncio.sleep(REFRESH_INTERVAL)
       await self.thought.update()
       await self.thought.run()
-      await self.close_idle_socket(websocket, 90)
+      await self.close_idle_socket(websocket, 45, 10)
 
-  async def close_idle_socket(self, websocket: WebSocket, max_idle_duration_allowed: int) -> None:
+  async def close_idle_socket(self, websocket: WebSocket, max_idle_duration_allowed: int, warning_interval) -> None:
     
     state = await self.thought.get_state()
     immediate_client_message = state.get("immediate_client_text", "")
-    if immediate_client_message and immediate_client_message.strip():
+    immediate_agent_text = state.get("immediate_agent_text", "")
+    if (immediate_client_message and immediate_client_message.strip()) or (immediate_agent_text and immediate_agent_text.strip()):
       self.idle_socket_duration = 0
     else:
-      self.idle_socket_duration += 10
+      self.idle_socket_duration += warning_interval
 
-    if self.idle_socket_duration > 0 and self.idle_socket_duration < max_idle_duration_allowed and self.idle_socket_duration % 30 == 0:
+    if self.idle_socket_duration > 0 and self.idle_socket_duration <= max_idle_duration_allowed and self.idle_socket_duration % warning_interval == 0:
       remaining = max_idle_duration_allowed - self.idle_socket_duration
       print(f"Socket remaining time is: {remaining} ")
       await websocket.send_text(json.dumps({
