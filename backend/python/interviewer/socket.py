@@ -31,13 +31,16 @@ async def handle_live_events(
   Parse the events and send them to the client and/or collect them for further processing.
   """
 
-  # Track user and model outputs between turn completion events
-  input_texts = []
-  output_texts = []
+  # Track agent's outputs between turn completion events
+  agent_output_audio = asyncio.Queue()
+  agent_output_text = asyncio.Queue()
 
   # Flag to track if we've seen an interruption in the current turn
   interrupted = False
 
+  # We shouldn't make a new line if it's the beginning of our conversation
+  beginning = True
+  
   while True:
     async for event in live_events:
 
@@ -49,16 +52,57 @@ async def handle_live_events(
       # Check for turn completion
       if event.turn_complete:
         if not interrupted:
+
+          if not beginning:
+            # Make a new line because the user has done speaking. It's the agent's speech
+            await websocket.send_text(json.dumps({
+              "status": "open",
+              "signal": "turn_complete",
+              "mime_type": "text/plain",
+              "data": ""
+            }))
+          beginning = False
+          
+          # Send agent's text data
+          while True:
+            try:
+              item = agent_output_text.get_nowait()
+              agent_output_text.task_done() 
+              message = {
+                "status": "open",
+                "role": "agent",
+                "mime_type": "text/plain",
+                "data": item
+              }
+              await websocket.send_text(json.dumps(message))
+            except asyncio.QueueEmpty:
+              break
+          # Send agent's audio data
+          while True:
+            try:
+              item = agent_output_audio.get_nowait()
+              agent_output_audio.task_done()
+              message = {
+                "status": "open",
+                "mime_type": "audio/pcm",
+                "data": item
+              }
+              await websocket.send_text(json.dumps(message))
+            except asyncio.QueueEmpty:
+              break
+
           logging.info("✅ Gemini done talking")
+
+          # Make a new line because the agent has done speaking. It will be the user's speech turn
           await websocket.send_text(json.dumps({
             "status": "open",
             "signal": "turn_complete",
             "mime_type": "text/plain",
             "data": ""
           }))
-          flag = " [turn complete] " if event.turn_complete else " [interrupted] "
-          await collect_client_txt(flag)
-          await collect_agent_txt(flag)
+          # flag = " [turn complete] " if event.turn_complete else " [interrupted] "
+          # await collect_client_txt(flag)
+          # await collect_agent_txt(flag)
         interrupted = False
         continue
 
@@ -75,51 +119,33 @@ async def handle_live_events(
       if is_audio:
         audio_data = part.inline_data and part.inline_data.data
         if audio_data:
-          message = {
-            "status": "open",
-            "mime_type": "audio/pcm",
-            "data": base64.b64encode(audio_data).decode("ascii")
-          }
-          await websocket.send_text(json.dumps(message))
+          await agent_output_audio.put(base64.b64encode(audio_data).decode("ascii"))
 
       # Process text content
       if part.text:
         # Check if this is user or model text based on content role
         if hasattr(event.content, "role") and event.content.role == "user":
-          # User text shouldn't be sent to the client
-          # input_texts.append(part.text)
-          # message = {
-          #   "status": "open",
-          #   "mime_type": "text/plain",
-          #   "data": part.text
-          # }
-          # await websocket.send_text(json.dumps(message))
-          await collect_client_txt(part.text)
-          # logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
-
-        # From the logs, we can see the duplicated text issue happens because
-        # we get streaming chunks with "partial=True" followed by a final consolidated
-        # response with "partial=None" containing the complete text
-
-        # Check in the event string for the partial flag
-        # Only process messages with "partial=True"
-        if event.partial:
+          # We send user's text immediately because the user should see his text as the user speaks
           message = {
             "status": "open",
-            "role": "agent",
+            "role": "user",
             "mime_type": "text/plain",
             "data": part.text
           }
           await websocket.send_text(json.dumps(message))
+          await collect_client_txt(part.text)
+          logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+
+        # We get streaming chunks with "partial=True" followed by a final consolidated
+        # response with "partial=None" containing the complete text so we only process messages with "partial=True"
+        if event.partial:
+          await agent_output_text.put(part.text)
           await collect_agent_txt(part.text)
           # logging.info(f"[AGENT TO CLIENT]: text/plain: {message}")
 
 async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, consecutiveIdleCountAllowed):
-# async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, consecutiveIdleCountAllowed):
   """Client to agent communication"""
   while True:
-    # Decode JSON message
-    # try:
     # Wait up to PING_INTERVAL for client message
     message_json = await websocket.receive_text()
     message = json.loads(message_json)
@@ -136,43 +162,3 @@ async def client_to_agent_messaging(websocket, live_request_queue, audio_queue, 
               mime_type=f"audio/pcm;rate={SEND_SAMPLE_RATE}",
           )
       )
-        
-        # elapsed_seconds = time.time() - start_time
-        # logging.info(f"🔇 Skipped noise frame (no voice detected) - {elapsed_seconds:.2f} - start_time = {start_time}")
-        # if elapsed_seconds > 10:
-        #   consecutiveIdleCountAllowed -= 1
-        #   start_time = time.time() 
-        #   raise TimeoutError("No valid speech detected the PING_INTERVAL")
-    #   else:
-    #     raise ValueError(f"Mime type not supported: {mime_type}")
-    # except TimeoutError:
-    #   if consecutiveIdleCountAllowed <= 0:
-    #     await websocket.send_text(json.dumps({
-    #       "status": "closed",
-    #       "signal": "close_socket",
-    #       "mime_type": "text/plain",
-    #       "data": "Maximum waiting time has been reached. Closing the socket"
-    #     }))
-    #     raise TimeoutError("No valid speech detected")
-    #   else:
-    #     await websocket.send_text(json.dumps({
-    #       "signal": "waiting",
-    #       "mime_type": "text/plain",
-    #       "data": "Agent is waiting for you to respond"
-    #     }))
-    # except Exception as e:
-    #   raise e
-
-
-async def process_and_send_audio(live_request_queue, audio_queue):
-  while True:
-    decoded_data = await audio_queue.get()
-
-    # Send the audio data to Gemini through ADK's LiveRequestQueue
-    live_request_queue.send_realtime(
-        types.Blob(
-            data=decoded_data,
-            mime_type=f"audio/pcm;rate={SEND_SAMPLE_RATE}",
-        )
-    )
-    audio_queue.task_done()
