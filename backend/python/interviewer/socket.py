@@ -133,7 +133,7 @@ async def handle_live_events(
         if hasattr(event.content, "role") and event.content.role == "user":
           # We send user's text immediately because the user should see his text as the user speaks
           await collect_client_txt(part.text)
-          logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
+          # logging.info(f"[CLIENT TO AGENT]: text/plain: {part.text}")
 
         # We get streaming chunks with "partial=True" followed by a final consolidated
         # response with "partial=None" containing the complete text so we only process messages with "partial=True"
