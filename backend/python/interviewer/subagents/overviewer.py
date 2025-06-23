@@ -17,6 +17,7 @@ The interview will consist of a few questions to understand how the interviewee 
 There will be 2 behavioral questions and takes about 10 minutes. There will not be any technical questions. There shall be some time at the end for the interviewee to ask questions.
 Ask whether the interviewee is ready to continue.
 If the interviewee asks for clarification, please reply with a rephrase of the overview.
+DO NOT ask the actual interview question.
 """
 
 

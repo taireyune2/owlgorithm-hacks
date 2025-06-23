@@ -14,9 +14,12 @@ from .ontopic_detector import ontopic_detector_second
 ############################# live agent instructions ##############################
 interviewer_instruction = """It is currently the followup question part of the interview.
 The interviewee has already provided a response to a behavioral question.
-You are responsible for asking the follow-up question.
+You are responsible for asking the follow-up questions based on the behavioral question and the interviewee's response:
 
-Here is the follow-up question: {followup_question}
+Behavioral question: {behavioral_question}
+
+Interviewee's response:
+{interviewee_response}
 
 If the interviewee asks for clarification, please rephrase the question.
 If the interviewee has started answering the question, DO NOT interrupt them.
@@ -30,8 +33,9 @@ def before_agent_callback(callback_context: CallbackContext) -> Optional[types.C
 
     questions = callback_context.state["followup_questions"]
     if len(questions) > 0:
+      response = callback_context.state["phase_client_text"].split(" [turn complete] ")
       callback_context.state["interview_instructions"] = interviewer_instruction.format(
-        followup_question=questions[-1]
+        behavioral_question=questions[-1], interviewee_response="\n".join(response)
       )
     else:
       raise ValueError("No follow-up questions available in the state.")
@@ -76,12 +80,14 @@ Arguments for 'criteria_met_tool':
 - reason: string explaining why the criteria are not met, if applicable.
 """
 
-followup_judge = LlmAgent(
-  name="followup_judge", 
+agent = LlmAgent(
+  name="followup_questioner", 
+  # name="followup_judge", 
   description="Questioner that asks a follow-up question based on the user's response.",
   model=configs["model"],
   instruction=_instruction,
   tools=[criteria_met_tool], 
+  before_agent_callback=[before_agent_callback],
   include_contents='none',
   generate_content_config=types.GenerateContentConfig(
     temperature=0.0
@@ -89,14 +95,14 @@ followup_judge = LlmAgent(
 )
 
 
-######################## thought agent - workflow ##########################
-agent = ParallelAgent(
-  name="followup_questioner",
-  description="Agent that manages the follow-up question phase of the interview.",
-  sub_agents=[
-    followup_judge,
-    question_generator_second, 
-    ontopic_detector_second,
-  ],
-  before_agent_callback=[before_agent_callback],
-)
+# ######################## thought agent - workflow ##########################
+# agent = ParallelAgent(
+#   name="followup_questioner",
+#   description="Agent that manages the follow-up question phase of the interview.",
+#   sub_agents=[
+#     followup_judge,
+#     question_generator_second, 
+#     ontopic_detector_second,
+#   ],
+#   before_agent_callback=[before_agent_callback],
+# )
