@@ -77,26 +77,28 @@ Arguments for 'criteria_met_tool':
 - reason: A string explaining why the criteria are not met, if applicable.
 """
 
-answer_judge = LlmAgent(
-  name="answer_judge",
+agent = LlmAgent(
+  # name="answer_judge",
+  name="behavioral_questioner",
   description="Judge the interviewee's answers to behavioral questions.",
   model=configs["model"],
   instruction=_instruction,
   tools=[criteria_met_tool], 
+  before_agent_callback=[before_agent_callback],
   include_contents='none',
   generate_content_config=types.GenerateContentConfig(
     temperature=0.0
   ),
 )
 
-##################### thought agent - workflow #####################################
-agent = ParallelAgent(
-  name="behavioral_questioner",
-  description="Agent that manages the behavioral question phase of the interview.",
-  sub_agents=[
-    answer_judge,
-    question_generator_first,
-    ontopic_detector_first
-  ],
-  before_agent_callback=[before_agent_callback],
-)
+# ##################### thought agent - workflow #####################################
+# agent = ParallelAgent(
+#   name="behavioral_questioner",
+#   description="Agent that manages the behavioral question phase of the interview.",
+#   sub_agents=[
+#     answer_judge,
+#     question_generator_first,
+#     ontopic_detector_first
+#   ],
+#   before_agent_callback=[before_agent_callback],
+# )
