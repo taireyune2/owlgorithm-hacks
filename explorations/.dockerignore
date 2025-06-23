@@ -1,7 +1,0 @@
-*.log*
-.env
-__pycache__
-.pytest_cache
-*/.env
-*/__pycache__
-*/.pytest_cache
