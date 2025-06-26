@@ -1,30 +1,22 @@
 #!/bin/bash
+IMAGE_NAME="owlspeak-frontend"
+VERSION="1.0.0"
+PROJECT_ID="owlspeak-app"
+REGISTRY_PREFIX="us-west1-docker.pkg.dev"
+REPO="owlspeak-deployment"
 
-
-image_name="owlgorithm-hacks-frontend"
-PROJECT_ID="interview-agent-463400"
-Registry_URL="us-west1-docker.pkg.dev/interview-agent-463400/interview-agent"
-repository_name="interview-agent"
-
-# Set your backend service URL (your deployed backend)
-BACKEND_URL="https://interview-agent-178724632712.us-west1.run.app"
-
-docker tag ${Registry_URL}/${PROJECT_ID}/${repository_name}/${image_name}:latest
 gcloud auth configure-docker us-west1-docker.pkg.dev
-docker buildx build \
-  --platform=linux/amd64,linux/arm64 \
-  -f Dockerfile.prod \
-  --build-arg VITE_BACKEND_API_URL=$BACKEND_URL \
-  --build-arg VITE_WEBSOCKET_URL=${BACKEND_URL/https/wss} \
-  -t us-west1-docker.pkg.dev/${PROJECT_ID}/${repository_name}/owlgorithm-hacks-frontend:latest \
-  --push .
-docker push us-west1-docker.pkg.dev/${PROJECT_ID}/${repository_name}/owlgorithm-hacks-frontend:latest
+docker tag owlspeak/frontend:latest $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
+docker push $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
 
 # Deploy to Cloud Run with environment variables
-gcloud run deploy owlgorithm-hacks-frontend \
-  --image us-west1-docker.pkg.dev/${PROJECT_ID}/${repository_name}/owlgorithm-hacks-frontend:latest \
+gcloud run deploy owlspeak-frontend \
+  --image $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION \
   --platform managed \
   --region us-west1 \
+  --min-instances 1 \
+  --max-instances 2 \
   --allow-unauthenticated \
-  --set-env-vars VITE_BACKEND_API_URL=$BACKEND_URL,VITE_WEBSOCKET_URL=${BACKEND_URL/https/wss} \
   --project $PROJECT_ID
+  # --set-env-vars VITE_BACKEND_API_URL=$BACKEND_URL,VITE_WEBSOCKET_URL=$BACKEND_URL/$SOCKET_EXTENSION \
+

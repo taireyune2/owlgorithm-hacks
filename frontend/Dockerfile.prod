@@ -26,5 +26,14 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/build ./build
 COPY --from=build /app/package.json /app/package.json
 COPY --from=build /app/node_modules /app/node_modules
+
+# Accept build arguments for environment variables
+ARG VITE_BACKEND_API_URL
+ARG VITE_WEBSOCKET_URL
+
+# Set environment variables for build time
+ENV VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL
+ENV VITE_WEBSOCKET_URL=$VITE_WEBSOCKET_URL
+
 EXPOSE 3000
 CMD ["npx", "remix-serve", "build/server/index.js"]

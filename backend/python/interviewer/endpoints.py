@@ -55,15 +55,15 @@ async def upload_material(request: Request, user_info: UserInfo):
     raise HTTPException(status_code=500, detail="Internal server error while uploading materials.")
 
 
-@router.post("/")
-async def interview_session(response: str):
-# async def interview_session(response: str, token: str = Depends(auth.validate_token)):
-  """
-  Text mock interview session.
+# @router.post("/")
+# async def interview_session(response: str):
+# # async def interview_session(response: str, token: str = Depends(auth.validate_token)):
+#   """
+#   Text mock interview session.
 
-  For agent debug.
-  """
-  pass
+#   For agent debug.
+#   """
+#   pass
 
 
 @router.websocket("/ws/{session_id}")

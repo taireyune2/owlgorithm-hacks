@@ -1,3 +1,4 @@
 #!/bin/bash
-cd ~/workspace/owlgorithm-hacks/backend
-docker build -t owlspeak/backend:latest .
+docker buildx build \
+ --platform=linux/amd64 \
+ -t owlspeak/backend:latest .

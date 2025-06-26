@@ -1,9 +1,21 @@
 #!/bin/bash
-image_version="1.0.0"
-image_name="owlgorithm-hacks-backend"
-# gcloud init
-# gcloud auth configure-docker us-west1-docker.pkg.dev
-docker tag owlgorithm-hacks-frontend:latest us-west1-docker.pkg.dev/owlgorithm-hacks/owl-speak/owlgorithm-hacks-frontend:$image_version
-docker push us-west1-docker.pkg.dev/owlgorithm-hacks/owl-speak/portfolio/shop-face:$image_version
+IMAGE_NAME="owlspeak-backend"
+VERSION="1.0.0"
+PROJECT_ID="owlspeak-app"
+REGISTRY_PREFIX="us-west1-docker.pkg.dev"
+REPO="owlspeak-deployment"
+GOOGLE_API_KEY="agent-prod-api-key:latest"
 
+gcloud auth configure-docker us-west1-docker.pkg.dev
+docker tag owlspeak/backend:latest $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
+docker push $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
 
+gcloud run deploy owlspeak-backend \
+  --image $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION \
+  --platform managed \
+  --region us-west1 \
+  --min-instances 1 \
+  --max-instances 2 \
+  --allow-unauthenticated \
+  --update-secrets GOOGLE_API_KEY=$GOOGLE_API_KEY \
+  --project $PROJECT_ID
