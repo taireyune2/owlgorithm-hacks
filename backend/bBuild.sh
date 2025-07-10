@@ -1,4 +1,2 @@
 #!/bin/bash
-docker buildx build \
- --platform=linux/amd64 \
- -t owlspeak/backend:latest .
+docker build -t owlspeak/backend:arm64 -f Dockerfile.pod .

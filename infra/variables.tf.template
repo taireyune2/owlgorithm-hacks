@@ -1,0 +1,29 @@
+variable "region" {
+  description = "The region where to deploy the infrastructure"
+  default     = "us-west-2"
+}
+
+variable "title" {
+  description = "Prefix indicating the project"
+  default = "owlspeak"
+}
+
+variable "infra_version" {
+  default = "albert"
+}
+
+variable "certificate_arn" {
+  description = "The ARN of the certificate to be used for the domain"
+}
+
+variable "secret_arn" {
+  description = "The ARN of the secret to be used for proxy sidecars"
+}
+
+variable "api_secret_arn" { 
+  description = "The ARN of the secret used by the backend API "
+}
+
+variable "image_registry" { 
+  description = "The URL of the image registry where the Docker images are stored"
+}
