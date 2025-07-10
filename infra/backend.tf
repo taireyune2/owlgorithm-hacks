@@ -102,7 +102,7 @@ resource "aws_ecs_task_definition" "backend" {
     {
       ### proxy sidecar
       name      = "proxy",
-      image     = "${var.image_registry}/portfolio/proxy:1.0.0",
+      image     = "${var.image_registry}/portfolio/proxy:1.1.0",
       essential = true,
       secrets = [
         {
@@ -129,7 +129,7 @@ resource "aws_ecs_task_definition" "backend" {
           "awslogs-create-group" = "true",
           "awslogs-group" = "${var.title}-${var.infra_version}",
           "awslogs-region" = var.region,        
-          "awslogs-stream-prefix" = "ecs/owlspeak-backend"
+          "awslogs-stream-prefix" = "ecs/backend"
         }
       },
     },
@@ -164,7 +164,7 @@ resource "aws_ecs_task_definition" "backend" {
           "awslogs-create-group" = "true",
           "awslogs-group"        = "${var.title}-${var.infra_version}",
           "awslogs-region"       = var.region,
-          "awslogs-stream-prefix"= "owlspeak-backend"
+          "awslogs-stream-prefix"= "ecs/backend"
         },
       }
     }]

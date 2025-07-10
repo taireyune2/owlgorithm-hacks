@@ -7,6 +7,7 @@ REPO="owlspeak-deployment"
 GOOGLE_API_KEY="agent-prod-api-key:latest"
 
 gcloud auth configure-docker us-west1-docker.pkg.dev
+docker buildx build --platform=linux/amd64 -t owlspeak/backend:amd64 .
 docker tag owlspeak/backend:amd64 $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
 docker push $REGISTRY_PREFIX/$PROJECT_ID/$REPO/$IMAGE_NAME:$VERSION
 

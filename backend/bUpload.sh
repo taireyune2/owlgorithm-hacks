@@ -4,6 +4,6 @@ IMAGE="backend"
 REGISTRY="363560690820.dkr.ecr.us-west-2.amazonaws.com"
 VERSION="1.0.0"
 
-aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 363560690820.dkr.ecr.us-west-2.amazonaws.com
+aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $REGISTRY
 docker tag owlspeak/backend:arm64 $REGISTRY/$FOLDER/$IMAGE:$VERSION
 docker push $REGISTRY/$FOLDER/$IMAGE:$VERSION

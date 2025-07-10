@@ -1,0 +1,41 @@
+FROM node:20 AS build
+
+# Set working directory
+WORKDIR /app
+
+# Accept build arguments for environment variables
+ARG VITE_BACKEND_API_URL
+ARG VITE_WEBSOCKET_URL
+
+# Set environment variables for build time
+ENV VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL
+ENV VITE_WEBSOCKET_URL=$VITE_WEBSOCKET_URL
+ENV PORT=8000
+
+# Copy package files
+COPY package.json package-lock.json ./  
+
+# Install dependencies  
+RUN npm install --silent
+COPY . .
+RUN npm run build --silent 
+FROM node:20-alpine AS production
+# Set working directory
+WORKDIR /app
+# Copy the build output and necessary files from the build stage
+COPY --from=build /app/public ./public
+COPY --from=build /app/build ./build
+COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/node_modules /app/node_modules
+
+# Accept build arguments for environment variables
+ARG VITE_BACKEND_API_URL
+ARG VITE_WEBSOCKET_URL
+
+# Set environment variables for build time
+ENV VITE_BACKEND_API_URL=$VITE_BACKEND_API_URL
+ENV VITE_WEBSOCKET_URL=$VITE_WEBSOCKET_URL
+ENV PORT=8000
+
+EXPOSE 8000
+CMD ["npx", "remix-serve", "build/server/index.js"]
